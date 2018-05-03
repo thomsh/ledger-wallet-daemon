@@ -2,6 +2,7 @@ package co.ledger.wallet.daemon.controllers
 
 import javax.inject.Inject
 
+import co.ledger.core.implicits.NotEnoughFundsException
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.controllers.requests.{CommonMethodValidations, RichRequest}
 import co.ledger.wallet.daemon.controllers.responses.ResponseSerializer
@@ -51,6 +52,8 @@ class TransactionsController @Inject()(transactionsService: TransactionsService)
         Map("response" -> "Wallet doesn't exist"), response)
       case _: AccountNotFoundException => responseSerializer.serializeBadRequest(
         Map("response" -> "Account doesn't exist"), response)
+      case _: NotEnoughFundsException => responseSerializer.serializeBadRequest(
+        Map("response" -> "Not enough funds"), response)
       case e: Throwable => responseSerializer.serializeInternalError(response, e)
     }
   }

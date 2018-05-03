@@ -30,10 +30,11 @@ class ApiClient(implicit val ec: ExecutionContext) {
     .withSessionPool.maxSize(poolSize)
     .newService(s"$host:$port")
 
-
+  //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
     val path = currencyName match {
       case "bitcoin" => "/blockchain/v2/btc/fees"
+      case "bitcoin_testnet" => "/blockchain/v2/btc_testnet/fees"
       case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
     }
     val request = Request(Method.Get, path)
