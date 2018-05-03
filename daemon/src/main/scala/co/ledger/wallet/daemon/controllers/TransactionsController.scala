@@ -70,7 +70,7 @@ class TransactionsController @Inject()(transactionsService: TransactionsService)
   post("/pools/:pool_name/wallets/:wallet_name/accounts/:account_index/transactions/sign")
   { request: SignTransactionRequest =>
     info(s"Sign transaction $request")
-    transactionsService.signTransaction(request.rawTx, request.appendedSigs, request.accountInfo).recover {
+    transactionsService.signTransaction(request.rawTx, request.pairedSignatures, request.accountInfo).recover {
       case _: WalletNotFoundException => responseSerializer.serializeBadRequest(
         Map("response" -> "Wallet doesn't exist"), response)
       case _: AccountNotFoundException => responseSerializer.serializeBadRequest(
@@ -96,8 +96,8 @@ object TransactionsController {
                                    ) extends RichRequest(request) {
     val accountInfo: AccountInfo = AccountInfo(pool_name, wallet_name, account_index, user)
     val rawTx: Array[Byte] = HexUtils.valueOf(raw_transaction)
-    lazy val appendedSigs: Seq[Array[Byte]] = signatures.zipWithIndex.map { case (sig, index) =>
-      HexUtils.valueOf(sig) ++ HexUtils.valueOf(pubkeys(index))
+    lazy val pairedSignatures: Seq[(Array[Byte], Array[Byte])] = signatures.zipWithIndex.map { case (sig, index) =>
+      (HexUtils.valueOf(sig), HexUtils.valueOf(pubkeys(index)))
     }
 
     @MethodValidation

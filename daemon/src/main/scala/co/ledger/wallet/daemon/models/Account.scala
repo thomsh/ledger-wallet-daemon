@@ -37,13 +37,14 @@ object Account {
       AccountView(wallet.name, index, b, "account key chain", wallet.currency.currencyView)
     }
 
-    def signTransaction(rawTx: Array[Byte], appendedSigs: Seq[Array[Byte]]): Future[String] = {
+    def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
       val tx = wallet.currency.parseUnsignedTransaction(rawTx)
 
-      if (tx.getInputs.size != appendedSigs.size) throw new scala.IllegalArgumentException("Signatures and transaction inputs size not matching")
+      if (tx.getInputs.size != signatures.size) throw new scala.IllegalArgumentException("Signatures and transaction inputs size not matching")
       else if (isBitcoin) {
         tx.getInputs.asScala.zipWithIndex.foreach { case (input, index) =>
-          input.pushToScriptSig(appendedSigs(index))
+          input.pushToScriptSig(signatures(index)._1) // signature
+          input.pushToScriptSig(signatures(index)._2) // pubkey
         }
         debug(s"transaction after sign '${HexUtils.valueOf(tx.serialize())}'")
         coreA.asBitcoinLikeAccount().broadcastTransaction(tx)
