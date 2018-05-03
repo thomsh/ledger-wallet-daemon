@@ -62,7 +62,12 @@ class CurrenciesApiTest extends APIFeatureTest {
     CurrencyFamily.BITCOIN,
     1,
     "bitcoin",
-    List.empty[UnitView],
+    List(
+      UnitView("testnet satoshi","satoshi","satoshi",0),
+      UnitView("testnet bitcoin", "BTC", "BTC", 8),
+      UnitView("testnet milli-bitcoin","mBTC", "mBTC", 5),
+      UnitView("testnet micro-bitcoin", "μBTC", "μBTC", 2),
+    ),
     BitcoinNetworkParamsView("btc_testnet", "6F", "C4", "043587CF", "PER_BYTE", 5430, "Bitcoin signed message:\n", false)
   )
   private val EXPECTED_BTC_CURRENCY = CurrencyView(
