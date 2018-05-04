@@ -27,6 +27,15 @@ class TransactionsApiTest extends APIFeatureTest {
     assertSignTransaction(TX_TO_SIGN_BODY, poolName, "wallet", 0, Status.InternalServerError)
   }
 
+  test("AccountsApi#Broadcast signed transaction") {
+    val poolName = "ledger"
+    createPool(poolName)
+    assertWalletCreation(poolName, "bitcoin_testnet", "bitcoin_testnet", Status.Ok)
+    assertCreateAccount(ACCOUNT_BODY, poolName, "bitcoin_testnet", Status.Ok)
+    assertSyncPool(Status.Ok)
+    assertSignTransaction(TESTNET_TX_TO_SIGN_BODY, poolName, "bitcoin_testnet", 0, Status.Ok)
+  }
+
   private def assertSignTransaction(tx: String, poolName: String, walletName: String, accountIndex: Int, expected: Status): Response = {
     server.httpPost(
       s"/pools/$poolName/wallets/$walletName/accounts/$accountIndex/transactions/sign",
@@ -106,5 +115,12 @@ class TransactionsApiTest extends APIFeatureTest {
       """}""" +
       """]""" +
       """}"""
+
+  private val TESTNET_TX_TO_SIGN_BODY =
+    s"""{
+       |"raw_transaction": "0100000001531ABD78576139559EA37E48A6554714D7434AE2BDF1451076A4C98219762AF20000000000FFFFFFFF02E8030000000000001976A9147F5365AABF5001DC5A3A21246E639B2C1FAD804888ACF4A03D00000000001976A914F9E27FEF11F7CE2F3EBE80535DD5AC812A85CCDD88AC8BC71300",
+       |"signatures": ["3045022100DD6BA1732C7BD0E94F9FE71B6290E04A4A4B293B949FC1C585A0382EEADD62A0022072BFC3F077652C9B7EFC1C92969E00438AC0C7296CBA0A4B97AF08C9DAC36B74"],
+       |"pubkeys": ["02A1DED78DAD86FE76E2238E29C58B549FBA769EF2601EBA643D96B17D3C6C4D4E"]
+       |}""".stripMargin
 
 }

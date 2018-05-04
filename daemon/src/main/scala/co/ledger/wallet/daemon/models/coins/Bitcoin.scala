@@ -34,7 +34,7 @@ object Bitcoin {
 
   def newTransactionView(from: core.BitcoinLikeTransaction): TransactionView = {
     BitcoinTransactionView(
-      newBlockView(from.getBlock),
+      Option(from.getBlock).map (newBlockView),
       Option(from.getFees).map (fees => fees.toLong),
       from.getHash,
       from.getTime,
@@ -113,7 +113,7 @@ case class BitcoinNetworkParamsView(
                                    ) extends NetworkParamsView
 
 case class BitcoinTransactionView(
-                                   @JsonProperty("block") block: BlockView,
+                                   @JsonProperty("block") block: Option[BlockView],
                                    @JsonProperty("fees") fees: Option[Long],
                                    @JsonProperty("hash") hash: String,
                                    @JsonProperty("time") time: Date,

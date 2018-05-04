@@ -120,7 +120,7 @@ class AccountsApiTest extends APIFeatureTest {
     assertCreateAccount(CORRECT_BODY, "op_pool", "op_wallet", Status.Ok)
     assertSyncPool(Status.Ok)
     assertGetAccountOp("op_pool", "op_wallet", 0, "noexistop", 0, Status.NotFound)
-    assertGetAccountOp("op_pool", "op_wallet", 0, "ed977add08cfc6cd158e65150bcd646d7a52b60f84e15e424b617d5511aaed21", 0, Status.Ok)
+    assertGetAccountOp("op_pool", "op_wallet", 0, "bcbe563a94e70a6fe0a190d6578f5440615eb64bbd6c49b2a6b77eb9ba01963a", 0, Status.Ok)
 
     val firstBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, None, 2, 0), Status.Ok))
 
