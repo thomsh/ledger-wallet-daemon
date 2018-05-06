@@ -1,0 +1,82 @@
+package co.ledger.wallet.daemon.clients
+
+import java.io.{BufferedInputStream, DataOutputStream}
+import java.net.{HttpURLConnection, URL}
+import java.util
+
+import co.ledger.core.{ErrorCode, HttpMethod, HttpReadBodyResult, HttpRequest}
+import com.twitter.inject.Logging
+
+import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
+
+//noinspection ScalaStyle
+class ScalaHttpClient(implicit val ec: ExecutionContext) extends co.ledger.core.HttpClient with Logging {
+import ScalaHttpClient._
+
+  override def execute(request: HttpRequest): Unit = Future {
+    val connection = new URL(request.getUrl).openConnection().asInstanceOf[HttpURLConnection]
+    connection.setRequestMethod(resolveMethod(request.getMethod))
+    for ((key, value) <- request.getHeaders.asScala) {
+       connection.setRequestProperty(key, value)
+    }
+    val body = request.getBody
+    if (body.nonEmpty) {
+      connection.setDoOutput(true)
+      val dataOs = new DataOutputStream(connection.getOutputStream)
+      dataOs.write(body)
+      dataOs.flush()
+      dataOs.close()
+    }
+    val statusCode = connection.getResponseCode
+    val statusText = connection.getResponseMessage
+    val response = new BufferedInputStream(connection.getInputStream)
+    val headers = new util.HashMap[String, String]()
+    for ((key, list) <- connection.getHeaderFields.asScala) {
+      headers.put(key, list.get(list.size() - 1))
+    }
+    val proxy = new co.ledger.core.HttpUrlConnection() {
+      private val buffer = new Array[Byte](PROXY_BUFFER_SIZE)
+
+      override def getStatusCode: Int = statusCode
+
+      override def getStatusText: String = statusText
+
+      override def getHeaders: util.HashMap[String, String] = headers
+
+      override def readBody(): HttpReadBodyResult = {
+        Try {
+          val size = response.read(buffer)
+
+          if (size < buffer.length) {
+            buffer.slice(0, size)
+          } else {
+            buffer
+          }
+        } match {
+          case Success(data) =>
+            new HttpReadBodyResult(null, data)
+          case Failure(_) =>
+            val error = new co.ledger.core.Error(ErrorCode.HTTP_ERROR, "An error happened during body reading.")
+            new HttpReadBodyResult(error, null)
+        }
+      }
+    }
+    request.complete(proxy, null)
+  }.failed.map[co.ledger.core.Error]({
+    others: Throwable =>
+      new co.ledger.core.Error(ErrorCode.HTTP_ERROR, others.getMessage)
+  }).foreach(request.complete(null, _))
+
+  private def resolveMethod(method: HttpMethod) = method match {
+    case HttpMethod.GET => "GET"
+    case HttpMethod.POST => "POST"
+    case HttpMethod.PUT => "PUT"
+    case HttpMethod.DEL => "DELETE"
+  }
+}
+
+object ScalaHttpClient {
+  val PROXY_BUFFER_SIZE: Int = 4096
+}

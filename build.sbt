@@ -1,7 +1,19 @@
+name := """ledger-wallet-daemon"""
+version := "0.1.0"
 
-lazy val protocol = (project in file("protocol"))
+lazy val commonSettings = Seq(
+  organization := "co.ledger",
+  scalaVersion := "2.12.2"
+)
 
-lazy val cli = (project in file("cli")).dependsOn(protocol)
+lazy val root = (project in file("."))
+  .settings(commonSettings)
+  .aggregate(binding, daemon)
 
-lazy val daemon = (project in file("daemon")).dependsOn(protocol)
-cancelable in Global := true
+lazy val binding = (project in file("ledger-core-binding"))
+  .settings(commonSettings)
+
+lazy val daemon = (project in file("daemon"))
+  .settings(commonSettings)
+  .enablePlugins(JavaServerAppPackaging)
+  .dependsOn(binding)
