@@ -1,5 +1,6 @@
 package co.ledger.wallet.daemon.controllers.requests
 
+import co.ledger.wallet.daemon.models.FeeMethod
 import com.twitter.finatra.validation.ValidationResult
 
 object CommonMethodValidations {
@@ -11,6 +12,12 @@ object CommonMethodValidations {
     ValidationResult.validate(
       REGEX.pattern.matcher(nameStr).matches,
       s"$name: invalid $name, $name should match ${REGEX.toString()}")
+  }
+
+  def validateFees(feeAmount: Option[Long], feeLevel: Option[String]): ValidationResult = {
+    ValidationResult.validate(feeAmount.isDefined
+      || (feeLevel.isDefined && FeeMethod.isValid(feeLevel.get)),
+      "fee_amount or fee_level must be defined, fee_level must be one of 'FAST', 'NORMAL', 'SLOW'")
   }
 
   private val REGEX = "([0-9a-zA-Z]+[_]?)+[0-9a-zA-Z]+".r

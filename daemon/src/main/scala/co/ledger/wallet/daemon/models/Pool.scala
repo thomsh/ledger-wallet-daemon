@@ -4,6 +4,7 @@ import co.ledger.core
 import co.ledger.core.implicits.{CurrencyNotFoundException => CoreCurrencyNotFoundException, _}
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.clients.ClientFactory
+import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.database.PoolDto
 import co.ledger.wallet.daemon.exceptions.{CurrencyNotFoundException, WalletNotFoundException}
 import co.ledger.wallet.daemon.libledger_core.async.LedgerCoreExecutionContext
@@ -252,7 +253,7 @@ object Pool {
     core.WalletPoolBuilder.createInstance()
       .setHttpClient(ClientFactory.httpClient)
       .setWebsocketClient(ClientFactory.webSocketClient)
-      .setLogPrinter(new NoOpLogPrinter(ClientFactory.threadDispatcher.getMainExecutionContext))
+      .setLogPrinter(new NoOpLogPrinter(ClientFactory.threadDispatcher.getMainExecutionContext, DaemonConfiguration.isPrintCoreLibLogsEnabled))
       .setThreadDispatcher(ClientFactory.threadDispatcher)
       .setPathResolver(new ScalaPathResolver(corePoolId(poolDto.userId, poolDto.name)))
       .setRandomNumberGenerator(new SecureRandomRNG)

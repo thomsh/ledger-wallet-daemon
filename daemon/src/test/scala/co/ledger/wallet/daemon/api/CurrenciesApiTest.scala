@@ -27,7 +27,7 @@ class CurrenciesApiTest extends APIFeatureTest {
   test("CurrenciesApi#Get currencies returns all") {
     val response: Response = assertCurrencies(CURRENCY_POOL, Status.Ok)
     val currencies: List[CurrencyView] = parse[List[CurrencyView]](response)
-    assert(currencies == List(EXPECTED_BTC_CURRENCY))
+    assert(currencies == List(EXPECTED_BTC_TESTNET, EXPECTED_BTC_CURRENCY))
   }
 
   test("CurrenciesApi#Get currencies from non-existing pool returns bad request") {
@@ -57,6 +57,19 @@ class CurrenciesApiTest extends APIFeatureTest {
   private val CURRENCY_BTC = "bitcoin"
   private val CURRENCY_NON_EXIST = "ethereum"
   private val CURRENCY_NON_EXIST_POOL = "non_exist_pool"
+  private val EXPECTED_BTC_TESTNET = CurrencyView(
+    "bitcoin_testnet",
+    CurrencyFamily.BITCOIN,
+    1,
+    "bitcoin",
+    List(
+      UnitView("testnet satoshi","satoshi","satoshi",0),
+      UnitView("testnet bitcoin", "BTC", "BTC", 8),
+      UnitView("testnet milli-bitcoin","mBTC", "mBTC", 5),
+      UnitView("testnet micro-bitcoin", "μBTC", "μBTC", 2),
+    ),
+    BitcoinNetworkParamsView("btc_testnet", "6F", "C4", "043587CF", "PER_BYTE", 5430, "Bitcoin signed message:\n", false)
+  )
   private val EXPECTED_BTC_CURRENCY = CurrencyView(
     "bitcoin",
     CurrencyFamily.BITCOIN,

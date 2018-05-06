@@ -12,7 +12,7 @@ class StatusController extends Controller {
     * End point queries for the version of core library currently used.
     *
     */
-  get("/status") {(request: Request) =>
+  get("/_health") {(request: Request) =>
     info(s"GET status $request")
     response.ok(Status(LedgerCore.getStringVersion))
   }

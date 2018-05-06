@@ -60,10 +60,10 @@ class DaemonCacheTest extends AssertionsForJUnit {
 
   @Test def verifyGetCurrencies(): Unit = {
     val currencies = Await.result(cache.getCurrencies("pool_1", PUB_KEY_1), Duration.Inf)
-    assertEquals(1, currencies.size)
+    assertEquals(2, currencies.size)
     val currency = Await.result(cache.getCurrency("bitcoin", "pool_2", PUB_KEY_1), Duration.Inf)
     assert(currency.isDefined)
-    assertEquals(currency.get.name, currencies(0).name)
+    assertEquals(currency.get.name, currencies(1).name)
   }
 
   @Test def verifyGetFreshAddressesFromNonExistingAccount(): Unit = {

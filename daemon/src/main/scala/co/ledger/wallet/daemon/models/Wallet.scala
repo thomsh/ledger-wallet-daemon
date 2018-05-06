@@ -78,6 +78,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
       (for (derivationResult <- accountDerivations.derivations) yield HexUtils.valueOf(derivationResult.pubKey.get)).asArrayList,
       (for (derivationResult <- accountDerivations.derivations) yield HexUtils.valueOf(derivationResult.chainCode.get)).asArrayList
     )
+    accountCreationInfo.getOwners.asScala.foreach(o => println(s"Owner: $o"))
     coreW.newAccountWithInfo(accountCreationInfo).map { coreA =>
       info(LogMsgMaker.newInstance("Account created").append("index", coreA.getIndex).append("wallet_name", name).toString())
       toCacheAndStartListen(accountLen.get()).map { _ =>

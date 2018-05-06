@@ -196,7 +196,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     getHardAccount(user.pubKey, poolName, walletName, accountIndex).flatMap { account => account.operation(uid, fullOp) }
   }
 
-  private def getHardAccount(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Account] = {
+  def getHardAccount(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Account] = {
     getHardWallet(pubKey, poolName, walletName).flatMap { wallet =>
       wallet.account(accountIndex).map { aO => aO.getOrElse(throw AccountNotFoundException(accountIndex)) }
     }

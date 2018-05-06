@@ -16,6 +16,9 @@ object DaemonConfiguration {
   private val DEFAULT_SYNC_INTERVAL: Int = 24 // 24 hours
   private val DEFAULT_SYNC_INITIAL_DELAY: Int = 300 // 5 minutes
 
+  val apiConnection: (String, Int, Int) =
+    (config.getString("api.host"), config.getInt("api.port"), config.getInt("api.connection_pool_size"))
+
   val adminUsers: Seq[(String, String)] = if (config.hasPath("demo_users")) {
     val usersConfig = config.getConfigList("demo_users").asScala
     for {
@@ -61,5 +64,7 @@ object DaemonConfiguration {
   val realTimeObserverOn: Boolean =
     if (config.hasPath("realtimeobservation")) { config.getBoolean("realtimeobservation") }
     else { false }
+
+  val isPrintCoreLibLogsEnabled: Boolean = config.hasPath("debug.print_core_logs") && config.getBoolean("debug.print_core_logs")
 
 }

@@ -1,14 +1,20 @@
 package co.ledger.wallet.daemon.models
 
 import co.ledger.core
+import co.ledger.core.BitcoinLikePickingStrategy
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
+import co.ledger.wallet.daemon.clients.ClientFactory
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
+import co.ledger.wallet.daemon.controllers.TransactionsController.TransactionInfo
 import co.ledger.wallet.daemon.libledger_core.async.LedgerCoreExecutionContext
+import co.ledger.wallet.daemon.models.coins.Bitcoin
+import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
 import co.ledger.wallet.daemon.schedulers.observers.{SynchronizationEventReceiver, SynchronizationResult}
 import co.ledger.wallet.daemon.services.LogMsgMaker
 import co.ledger.wallet.daemon.utils.HexUtils
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.common.primitives.UnsignedInteger
 import com.twitter.inject.Logging
 
 import scala.collection.JavaConverters._
@@ -23,10 +29,51 @@ object Account {
 
     val index: Int = coreA.getIndex
 
+    private val isBitcoin: Boolean = coreA.isInstanceOfBitcoinLikeAccount
+
     def balance: Future[Long] = coreA.getBalance().map { balance => balance.toLong }
 
     def accountView: Future[AccountView] = balance.map { b =>
       AccountView(wallet.name, index, b, "account key chain", wallet.currency.currencyView)
+    }
+
+    def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
+      val tx = wallet.currency.parseUnsignedTransaction(rawTx)
+
+      if (tx.getInputs.size != signatures.size) throw new scala.IllegalArgumentException("Signatures and transaction inputs size not matching")
+      else if (isBitcoin) {
+        tx.getInputs.asScala.zipWithIndex.foreach { case (input, index) =>
+          input.pushToScriptSig(signatures(index)._1) // signature
+          input.pushToScriptSig(signatures(index)._2) // pubkey
+        }
+        debug(s"transaction after sign '${HexUtils.valueOf(tx.serialize())}'")
+        coreA.asBitcoinLikeAccount().broadcastTransaction(tx)
+      } else throw new UnsupportedOperationException("Account type not supported, can't sign transaction")
+    }
+
+    def createTransaction(transactionInfo: TransactionInfo): Future[TransactionView] = {
+
+        if (isBitcoin) {
+          val feesPerByte: Future[core.Amount] = transactionInfo.feeAmount map { amount =>
+             Future.successful(wallet.currency.convertAmount(amount))
+            } getOrElse {
+            ClientFactory.apiClient.getFees(wallet.currency.name).map { feesInfo =>
+              wallet.currency.convertAmount(feesInfo.getAmount(transactionInfo.feeMethod.get))
+            }
+          }
+          feesPerByte.flatMap { fees =>
+            val tx = coreA.asBitcoinLikeAccount().buildTransaction()
+              .sendToAddress(wallet.currency.convertAmount(transactionInfo.amount), transactionInfo.recipient)
+              .pickInputs(BitcoinLikePickingStrategy.DEEP_OUTPUTS_FIRST, UnsignedInteger.MAX_VALUE.intValue)
+              .setFeesPerByte(fees)
+            transactionInfo.excludeUtxos.foreach { case (previousTx, outputIndex) =>
+                tx.excludeUtxo(previousTx, outputIndex)
+            }
+            tx.build().flatMap { t =>
+              Bitcoin.newUnsignedTransactionView(t, fees.toLong)
+            }
+          }
+        } else throw new UnsupportedOperationException("Account type not supported, can't create transaction")
     }
 
     def operation(uid: String, fullOp: Int): Future[Option[Operation]] = {

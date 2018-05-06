@@ -33,6 +33,7 @@ class ServerImpl extends HttpServer {
       .add[AuthenticationFilter, StatusController]
       .add[AuthenticationFilter, WalletPoolsController]
       .add[AuthenticationFilter, WalletsController]
+      .add[AuthenticationFilter, TransactionsController]
       .exceptionMapper[AuthenticationExceptionMapper]
 
   override protected def warmup(): Unit = {

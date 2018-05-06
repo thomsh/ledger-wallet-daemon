@@ -4,9 +4,11 @@
 package co.ledger.core;
 
 public enum ErrorCode {
-    /** Pool errors */
-    UNKNOWN_NETWORK_PARAMETERS,
-    /** Crypto errors */
+    /**
+     * Pool errors
+     *unknown_network_parameters;
+     * Crypto errors
+     */
     EC_PRIV_KEY_INVALID_FORMAT,
     EC_PUB_KEY_INVALID,
     EC_DER_SIGNATURE_INVALID,
@@ -38,6 +40,7 @@ public enum ErrorCode {
     PRIVATE_DERIVATION_NOT_SUPPORTED,
     /** Bitcoin error */
     INVALID_NETWORK_ADDRESS_VERSION,
+    INCOMPLETE_TRANSACTION,
     /** Generic */
     RUNTIME_ERROR,
     OUT_OF_RANGE,
@@ -74,6 +77,8 @@ public enum ErrorCode {
     UNKNOWN_BLOCKCHAIN_EXPLORER_ENGINE,
     UNKNOWN_BLOCKCHAIN_OBSERVER_ENGINE,
     UNKNOWN_SYNCHRONIZATION_ENGINE,
+    /** Wallet transaction */
+    NOT_ENOUGH_FUNDS,
     /** Bad cast */
     BAD_CAST,
     /** Query build */

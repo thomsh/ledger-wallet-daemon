@@ -17,6 +17,16 @@ class WalletsApiTest extends APIFeatureTest {
     deletePool(WALLET_POOL)
   }
 
+  test("WalletsApi#Create then Get same wallet from pool Return OK (for bitcoin testnet)") {
+    createPool(WALLET_POOL)
+    val createdW =  walletFromResponse(assertWalletCreation(WALLET_POOL, "my_testnet_wallet", "bitcoin_testnet", Status.Ok))
+    assert("my_testnet_wallet" === createdW.name)
+    assert("bitcoin_testnet" === createdW.currency.name)
+    val getW =  walletFromResponse(assertGetWallet(WALLET_POOL, "my_testnet_wallet", Status.Ok))
+    assert(createdW === getW)
+    deletePool(WALLET_POOL)
+  }
+
   test("WalletsApi#Get non exist wallet from existing pool Return Not Found") {
     createPool(WALLET_POOL)
     val notFoundErr = server.mapper.objectMapper.readValue[ErrorResponseBody](

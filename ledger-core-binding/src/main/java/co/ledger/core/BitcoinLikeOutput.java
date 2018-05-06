@@ -5,16 +5,41 @@ package co.ledger.core;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**Class representing Bitcoin outputs */
 public abstract class BitcoinLikeOutput {
+    /**
+     *Get transaction hash in which output was 'created'
+     *@return String, transaction hash containing output
+     */
     public abstract String getTransactionHash();
 
+    /**
+     *Get index of output in list of all outputs contained in same transaction
+     *@return 32 bits integer, index of output
+     */
     public abstract int getOutputIndex();
 
+    /**
+     *Get amount of output
+     *@return Amount object, amount of output
+     */
     public abstract Amount getValue();
 
+    /**
+     *Get script (witness script) cryptographic puzzle that determines the conditions to spend the output
+     *@return in Bytes (variable size depending on type of script P2PKH, P2SH), locking script to spend UTXO
+     */
     public abstract byte[] getScript();
 
+    public abstract BitcoinLikeScript parseScript();
+
+    /**
+     *Get address that spent the output
+     *@return Optional String, address that spent
+     */
     public abstract String getAddress();
+
+    public abstract DerivationPath getDerivationPath();
 
     private static final class CppProxy extends BitcoinLikeOutput
     {
@@ -72,11 +97,27 @@ public abstract class BitcoinLikeOutput {
         private native byte[] native_getScript(long _nativeRef);
 
         @Override
+        public BitcoinLikeScript parseScript()
+        {
+            assert !this.destroyed.get() : "trying to use a destroyed object";
+            return native_parseScript(this.nativeRef);
+        }
+        private native BitcoinLikeScript native_parseScript(long _nativeRef);
+
+        @Override
         public String getAddress()
         {
             assert !this.destroyed.get() : "trying to use a destroyed object";
             return native_getAddress(this.nativeRef);
         }
         private native String native_getAddress(long _nativeRef);
+
+        @Override
+        public DerivationPath getDerivationPath()
+        {
+            assert !this.destroyed.get() : "trying to use a destroyed object";
+            return native_getDerivationPath(this.nativeRef);
+        }
+        private native DerivationPath native_getDerivationPath(long _nativeRef);
     }
 }
