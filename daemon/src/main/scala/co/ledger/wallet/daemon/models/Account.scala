@@ -34,7 +34,7 @@ object Account {
     def balance: Future[Long] = coreA.getBalance().map { balance => balance.toLong }
 
     def accountView: Future[AccountView] = balance.map { b =>
-      AccountView(wallet.name, index, b, "account key chain", wallet.currency.currencyView)
+      AccountView(wallet.name, index, b, coreA.getRestoreKey(), wallet.currency.currencyView)
     }
 
     def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
