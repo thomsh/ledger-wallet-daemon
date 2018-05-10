@@ -5,6 +5,8 @@ import java.net.{HttpURLConnection, URL}
 import java.util
 
 import co.ledger.core.{ErrorCode, HttpMethod, HttpReadBodyResult, HttpRequest}
+import co.ledger.wallet.daemon.utils.HexUtils
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import com.twitter.inject.Logging
 
 import scala.collection.JavaConverters._
@@ -21,6 +23,8 @@ import ScalaHttpClient._
     for ((key, value) <- request.getHeaders.asScala) {
        connection.setRequestProperty(key, value)
     }
+    connection.setRequestProperty("Content-Type", "application/json")
+    info(s"${request.getMethod} ${request.getUrl}")
     val body = request.getBody
     if (body.nonEmpty) {
       connection.setDoOutput(true)
@@ -31,7 +35,9 @@ import ScalaHttpClient._
     }
     val statusCode = connection.getResponseCode
     val statusText = connection.getResponseMessage
-    val response = new BufferedInputStream(connection.getInputStream)
+    val isError = !(statusCode >= 200 && statusCode < 400)
+    val response =
+      new BufferedInputStream(if (!isError) connection.getInputStream else connection.getErrorStream)
     val headers = new util.HashMap[String, String]()
     for ((key, list) <- connection.getHeaderFields.asScala) {
       headers.put(key, list.get(list.size() - 1))
@@ -47,17 +53,26 @@ import ScalaHttpClient._
 
       override def readBody(): HttpReadBodyResult = {
         Try {
-          val size = response.read(buffer)
-
-          if (size < buffer.length) {
-            buffer.slice(0, size)
-          } else {
-            buffer
-          }
+          val outputStream = new ByteOutputStream()
+          var size = 0
+          do {
+            size = response.read(buffer)
+            if (size < buffer.length) {
+              outputStream.write(buffer.slice(0, size))
+            } else {
+              outputStream.write(buffer)
+            }
+          } while (size > 0)
+          outputStream.getBytes
         } match {
           case Success(data) =>
+            debug("**************")
+            debug(new String(data))
+            debug("**************")
+            if (isError) info(s"Received error ${new String(data)}")
             new HttpReadBodyResult(null, data)
-          case Failure(_) =>
+          case Failure(ex) =>
+            ex.printStackTrace()
             val error = new co.ledger.core.Error(ErrorCode.HTTP_ERROR, "An error happened during body reading.")
             new HttpReadBodyResult(error, null)
         }
@@ -78,5 +93,5 @@ import ScalaHttpClient._
 }
 
 object ScalaHttpClient {
-  val PROXY_BUFFER_SIZE: Int = 4096
+  val PROXY_BUFFER_SIZE: Int = 4*4096
 }

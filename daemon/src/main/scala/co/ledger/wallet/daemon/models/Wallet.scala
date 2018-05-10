@@ -34,7 +34,16 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   def lastBlockHeight: Future[Long] =
     if (currentBlockHeight.get() < 0) {
-      coreW.getLastBlock().map { lastBlock => updateBlockHeight(lastBlock.getHeight); currentBlockHeight.get() }
+      coreW.getLastBlock()
+        .map { lastBlock =>
+          updateBlockHeight(lastBlock.getHeight); currentBlockHeight.get()
+        } recover {
+        case ex: BlockNotFoundException =>
+          updateBlockHeight(0)
+          0L
+        case others =>
+          throw others
+      }
     } else {
       Future.successful(currentBlockHeight.get())
     }
