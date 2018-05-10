@@ -1,7 +1,7 @@
 
 # Pull base image
 # Using a ubuntu configuration for stdc++
-FROM ubuntu:17.04
+FROM ubuntu:16.04
 
 # Install Java.
 RUN apt-get -qq update
