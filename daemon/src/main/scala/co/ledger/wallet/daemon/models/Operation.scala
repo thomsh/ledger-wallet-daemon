@@ -25,7 +25,7 @@ class Operation(private val coreO: core.Operation, private val account: Account,
   val senders: Seq[String] = coreO.getSenders.asScala
   val recipients: Seq[String] = coreO.getRecipients.asScala
   val fees: Long = coreO.getFees.toLong
-  val blockHeight: Option[Long] = Option(coreO.getBlockHeight)
+  val blockHeight: Option[Long] = if (coreO.getBlockHeight == null) None else Option(coreO.getBlockHeight)
   lazy val trustView: Option[TrustIndicatorView] = Option(coreO.getTrust).map (trust => newTrustIndicatorView(trust))
   lazy val transactionView: TransactionView = newTransactionView(coreO, currencyFamily)
 
@@ -49,7 +49,7 @@ class Operation(private val coreO: core.Operation, private val account: Account,
 
   private def confirmations(wallet: Wallet): Future[Long] =
     wallet.lastBlockHeight.map { lastBlockHeight => blockHeight match {
-        case Some(height) => lastBlockHeight - height
+        case Some(height) => lastBlockHeight - height + 1
         case None => 0L
       }
     }
