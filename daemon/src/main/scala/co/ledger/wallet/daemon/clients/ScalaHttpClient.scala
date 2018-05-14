@@ -66,9 +66,6 @@ import ScalaHttpClient._
           outputStream.getBytes
         } match {
           case Success(data) =>
-            debug("**************")
-            debug(new String(data))
-            debug("**************")
             if (isError) info(s"Received error ${new String(data)}")
             new HttpReadBodyResult(null, data)
           case Failure(ex) =>
