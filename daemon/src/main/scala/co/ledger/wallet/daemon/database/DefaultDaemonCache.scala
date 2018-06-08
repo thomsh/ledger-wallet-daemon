@@ -51,6 +51,10 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     getHardWallet(user.pubKey, poolName, walletName).flatMap { w => w.addAccountIfNotExit(accountDerivations) }
   }
 
+  override def createAccount(accountDerivation: AccountExtendedDerivationView, user: User, poolName: String, walletName: String): Future[Account] = {
+    getHardWallet(user.pubKey, poolName, walletName).flatMap(_.addAccountIfNotExist(accountDerivation))
+  }
+
   def getCurrency(currencyName: String, poolName: String, pubKey: String): Future[Option[Currency]] = {
     getHardPool(pubKey, poolName).flatMap { pool => pool.currency(currencyName) }
   }
@@ -137,6 +141,14 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     getHardWallet(pubKey, poolName, walletName).flatMap { wallet => wallet.accountCreationInfo(accountIndex) }
   }
 
+
+  override def getNextExtendedAccountCreationInfo(pubKey: String,
+                                                  poolName: String,
+                                                  walletName: String,
+                                                  accountIndex: Option[Int]): Future[Account.ExtendedDerivation] = {
+    getHardWallet(pubKey, poolName, walletName).flatMap(_.accountExtendedCreation(accountIndex))
+  }
+
   def getPreviousBatchAccountOperations(
                                          user: User,
                                          accountIndex: Int,
@@ -152,7 +164,6 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
       }
     }
   }
-
 
   def getNextBatchAccountOperations(
                                      user: User,

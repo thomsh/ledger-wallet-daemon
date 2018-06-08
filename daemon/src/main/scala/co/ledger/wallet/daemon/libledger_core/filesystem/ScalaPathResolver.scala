@@ -33,6 +33,7 @@ class ScalaPathResolver(identifier: String) extends PathResolver {
   private def resolve(path: String, folder: String) = {
     val resolvedPath = new File(new File(installDirectory, folder), path)
     resolvedPath.getParentFile.mkdirs()
+    println(s"Path ${resolvedPath.getAbsolutePath}")
     resolvedPath.getAbsolutePath
   }
   lazy val installDirectory: File = {

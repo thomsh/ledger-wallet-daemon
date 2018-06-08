@@ -19,6 +19,7 @@ import com.twitter.inject.Logging
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success}
 
 object Account {
 
@@ -31,10 +32,13 @@ object Account {
 
     private val isBitcoin: Boolean = coreA.isInstanceOfBitcoinLikeAccount
 
-    def balance: Future[Long] = coreA.getBalance().map { balance => balance.toLong }
+    def balance: Future[Long] = coreA.getBalance().map { balance =>
+      println(s"Hello account $index: ${balance.toLong}")
+      balance.toLong
+    }
 
     def accountView: Future[AccountView] = balance.map { b =>
-      AccountView(wallet.name, index, b, coreA.getRestoreKey(), wallet.currency.currencyView)
+      AccountView(wallet.name, index, b, coreA.getRestoreKey, wallet.currency.currencyView)
     }
 
     def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
@@ -98,7 +102,7 @@ object Account {
     }
 
     def freshAddresses(): Future[Seq[String]] = {
-      coreA.getFreshPublicAddresses().map(_.asScala)
+      coreA.getFreshPublicAddresses().map(_.asScala.map(_.toString))
     }
 
     def sync(poolName: String): Future[SynchronizationResult] = {
@@ -155,6 +159,17 @@ object Account {
     }
   }
 
+  class ExtendedDerivation(info: core.ExtendedKeyAccountCreationInfo) {
+    val index: Int = info.getIndex
+    lazy val view: AccountExtendedDerivationView = {
+      val extKeys = info.getExtendedKeys.asScala.map(Option.apply).padTo(info.getDerivations.size(), None)
+      val derivations = (info.getDerivations.asScala, info.getOwners.asScala, extKeys).zipped map {
+        case (path, owner, key) =>
+          ExtendedDerivationView(path, owner, key)
+      }
+      AccountExtendedDerivationView(index, derivations.toList)
+    }
+  }
 
   def newInstance(coreA: core.Account, wallet: Wallet): Account = {
     new Account(coreA, wallet)
@@ -189,3 +204,14 @@ case class AccountDerivationView(
 
   override def toString: String = s"AccountDerivationView(account_index: $accountIndex, derivations: $derivations)"
 }
+
+case class ExtendedDerivationView(
+                                   @JsonProperty("path") path: String,
+                                   @JsonProperty("owner") owner: String,
+                                   @JsonProperty("extended_key") extKey: Option[String],
+                                 )
+
+case class AccountExtendedDerivationView(
+                                          @JsonProperty("account_index") accountIndex: Int,
+                                          @JsonProperty("derivations") derivations: Seq[ExtendedDerivationView]
+                                        )

@@ -2,7 +2,7 @@ package co.ledger.wallet.daemon.filters
 
 import javax.inject.Inject
 
-import co.ledger.wallet.daemon.models.AccountDerivationView
+import co.ledger.wallet.daemon.models.{AccountDerivationView, AccountExtendedDerivationView}
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.finagle.{Service, SimpleFilter}
 import com.twitter.finatra.http.exceptions.BadRequestException
@@ -23,6 +23,20 @@ class AccountCreationFilter @Inject()(messageBodyManager: MessageBodyManager) ex
   }
 }
 
+class AccountExtendedCreationFilter @Inject()(messageBodyManager: MessageBodyManager) extends SimpleFilter[Request, Response] {
+
+  override def apply(request: Request, service: Service[Request, Response]): Future[Response] = {
+    val accountCreationBody = messageBodyManager.read[AccountExtendedDerivationView](request)
+    accountCreationBody.derivations.foreach { derivation =>
+      if(derivation.extKey.isEmpty) {
+        throw new BadRequestException("derivations.extended_key: field is required")
+      }
+    }
+    ExtendedAccountCreationContext.setAccountExtendedCreationBody(request, accountCreationBody)
+    service(request)
+  }
+}
+
 object AccountCreationContext {
   private val AccountCreationField = Request.Schema.newField[AccountDerivationView]()
 
@@ -32,5 +46,17 @@ object AccountCreationContext {
 
   def setAccountCreationBody(request: Request, accountCreationBody: AccountDerivationView): Unit = {
     request.ctx.update(AccountCreationField, accountCreationBody)
+  }
+}
+
+object ExtendedAccountCreationContext {
+  private val ExtendedAccountCreationField = Request.Schema.newField[AccountExtendedDerivationView]()
+
+  implicit class AccountExtendedCreationContextSyntax(val request: Request) extends AnyVal {
+    def accountExtendedCreationBody: AccountExtendedDerivationView = request.ctx(ExtendedAccountCreationField)
+  }
+
+  def setAccountExtendedCreationBody(request: Request, accountCreationBody: AccountExtendedDerivationView): Unit = {
+    request.ctx.update(ExtendedAccountCreationField, accountCreationBody)
   }
 }

@@ -3,7 +3,7 @@ package co.ledger.wallet.daemon.database
 import java.util.UUID
 
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
-import co.ledger.wallet.daemon.models.Account.{Account, Derivation}
+import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 
@@ -22,6 +22,18 @@ trait DaemonCache {
     * @return a Future of new instance of `co.ledger.wallet.daemon.models.Account`.
     */
   def createAccount(accountDerivation: AccountDerivationView, user: User, poolName: String, walletName: String): Future[Account]
+
+  /**
+    * Method to create an account instance with extended account. The account may already exist in the library.
+    *
+    * @param accountDerivation derivation information specified for this account.
+    * @param user the user who can access the account.
+    * @param poolName the name of the wallet pool the account belongs to.
+    * @param walletName the name of the wallet the account belongs to.
+    * @return a Future of new instance of `co.ledger.wallet.daemon.models.Account`.
+    */
+  def createAccount(accountDerivation: AccountExtendedDerivationView, user: User, poolName: String, walletName: String): Future[Account]
+
 
   /**
     * Getter of accounts sequence with specified parameters.
@@ -117,6 +129,19 @@ trait DaemonCache {
                                          walletName: String,
                                          previous: UUID,
                                          fullOp: Int): Future[PackedOperationsView]
+
+
+  /**
+    * Getter of information for next account creation with extended keys.
+    *
+    * @param pubKey the public key of user.
+    * @param poolName the name of wallet pool the account belongs to.
+    * @param walletName the name of wallet the account belongs to.
+    * @param accountIndex the unique index of the account. If `None`, a default index will be created. If the
+    *                     specified index already exists in core library, an error will occur. `None` is recommended.
+    * @return a Future of `co.ledger.wallet.daemon.models.Derivation` instance.
+    */
+  def getNextExtendedAccountCreationInfo(pubKey: String, poolName: String, walletName: String, accountIndex: Option[Int]): Future[ExtendedDerivation]
 
   /**
     * Getter of information for next account creation.
