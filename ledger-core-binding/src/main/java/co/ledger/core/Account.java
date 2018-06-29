@@ -17,6 +17,8 @@ public abstract class Account {
     /**Key of the synchronization error code. The code is a stringified version of the value in the ErrorCode enum. */
     public static final String EV_SYNC_ERROR_CODE = "EV_SYNC_ERROR_CODE";
 
+    public static final String EV_SYNC_ERROR_CODE_INT = "EV_SYNC_ERROR_CODE_INT";
+
     /**Key of the synchronization error message. The message is stored as a string. */
     public static final String EV_SYNC_ERROR_MESSAGE = "EV_SYNC_ERROR_MESSAGE";
 
@@ -153,7 +155,7 @@ public abstract class Account {
      *Erase data (in user's DB) relative to wallet since given date
      *@param date, start date of data deletion
      */
-    public abstract void eraseDataSince(Date date);
+    public abstract void eraseDataSince(Date date, ErrorCodeCallback callback);
 
     private static final class CppProxy extends Account
     {
@@ -347,11 +349,11 @@ public abstract class Account {
         private native String native_getRestoreKey(long _nativeRef);
 
         @Override
-        public void eraseDataSince(Date date)
+        public void eraseDataSince(Date date, ErrorCodeCallback callback)
         {
             assert !this.destroyed.get() : "trying to use a destroyed object";
-            native_eraseDataSince(this.nativeRef, date);
+            native_eraseDataSince(this.nativeRef, date, callback);
         }
-        private native void native_eraseDataSince(long _nativeRef, Date date);
+        private native void native_eraseDataSince(long _nativeRef, Date date, ErrorCodeCallback callback);
     }
 }
