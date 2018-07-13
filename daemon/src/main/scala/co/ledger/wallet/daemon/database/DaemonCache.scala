@@ -255,6 +255,22 @@ trait DaemonCache {
     */
   def syncOperations(): Future[Seq[SynchronizationResult]]
 
+  /**
+    * Method to synchronize account operations from public resources. The method may take a while
+    * to finish. This method only synchronize a single pool.
+    *
+    * @return a Future of sequence of result of synchronization.
+    */
+  def syncOperations(pubKey: String, poolName: String): Future[Seq[SynchronizationResult]]
+
+  /**
+    * Method to synchronize account operations from public resources. The method may take a while
+    * to finish. This method onlly synchronize a single account.
+    *
+    * @return a Future of sequence of result of synchronization.
+    */
+  def syncOperations(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Seq[SynchronizationResult]]
+
   //**************** user ***************
   /**
     * Getter of user instance.

@@ -35,6 +35,20 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     }
   }
 
+  override def syncOperations(pubKey: String, poolName: String): Future[Seq[SynchronizationResult]] = {
+    getWalletPool(pubKey, poolName).flatMap({
+      case Some(pool) => pool.sync()
+      case None => throw WalletPoolNotFoundException(poolName)
+    })
+  }
+
+  override def syncOperations(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Seq[SynchronizationResult]] = {
+    getAccount(accountIndex, pubKey, poolName, walletName).flatMap({
+      case Some(account) => account.sync(poolName).map(Seq(_))
+      case None => throw AccountNotFoundException(accountIndex)
+    })
+  }
+
   def getAccount(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Option[Account]] = {
     getHardWallet(pubKey, poolName, walletName).flatMap { wallet => wallet.account(accountIndex) }
   }

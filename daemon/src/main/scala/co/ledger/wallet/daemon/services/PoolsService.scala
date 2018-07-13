@@ -30,6 +30,10 @@ class PoolsService @Inject()(daemonCache: DaemonCache) extends DaemonService {
     }
   }
 
+  def syncOperations(user: User, poolName: String): Future[Seq[SynchronizationResult]] = {
+    daemonCache.syncOperations(user.pubKey, poolName)
+  }
+
   def syncOperations(): Future[Seq[SynchronizationResult]] = {
     daemonCache.syncOperations()
   }

@@ -64,6 +64,14 @@ class WalletPoolsController @Inject()(poolsService: PoolsService) extends Contro
   }
 
   /**
+    * End point to trigger the synchronization process of one existing wallet pool
+    *
+    */
+  post("/pools/:pool_name/operations/synchronize") { request: PoolRouteRequest =>
+    poolsService.syncOperations(request.user, request.pool_name)
+  }
+
+  /**
     * End point to create a new wallet pool.
     *
     */

@@ -7,6 +7,8 @@ parallelExecution in IntegrationTest := false
 testForkedParallel in Test := false
 testForkedParallel in IntegrationTest := false
 testOptions in Test := Seq(Tests.Argument(TestFrameworks.JUnit, "-a"))
+mainClass in Compile := Some("co.ledger.wallet.daemon.Server")
+test in assembly := {}
 
 lazy val versions = new {
   val andrebeat = "0.4.0"

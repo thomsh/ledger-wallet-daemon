@@ -167,6 +167,13 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
   }
 
   /**
+    * Synchronize a single account
+    */
+  post("/pools/:pool_name/wallets/:wallet_name/accounts/:account_index/operations/synchronize") { request: AccountRequest =>
+    accountsService.synchronizeAccount(request.account_index, request.user, request.pool_name, request.wallet_name)
+  }
+
+  /**
     * End point to create a new account within the specified pool and wallet.
     *
     */
