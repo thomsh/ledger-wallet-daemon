@@ -55,6 +55,8 @@ object DaemonConfiguration {
     case others => throw new Exception(s"Unknown database backend $others")
   }
 
+  val isWhiteListDisabled: Boolean = if (!config.hasPath("disable_whitelist")) false else config.getBoolean("disable_whitelist")
+
   val synchronizationInterval: (Int, Int) = (
     if (config.hasPath("synchronization.initial_delay_in_seconds")) { config.getInt("synchronization.initial_delay_in_seconds") }
     else { DEFAULT_SYNC_INITIAL_DELAY },
