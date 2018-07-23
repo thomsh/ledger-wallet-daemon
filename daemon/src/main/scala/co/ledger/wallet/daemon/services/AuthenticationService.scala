@@ -2,12 +2,12 @@ package co.ledger.wallet.daemon.services
 
 import java.nio.charset.StandardCharsets
 import java.util.Date
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.database.DaemonCache
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
-import co.ledger.wallet.daemon.services.AuthenticationService.{AuthenticationFailedException, AuthentifiedUserContext}
+import co.ledger.wallet.daemon.services.AuthenticationService.{AuthenticationFailedException, AuthentifiedUserContext, UserNotFoundException}
 import co.ledger.wallet.daemon.utils._
 import com.twitter.finagle.http.Request
 import com.twitter.util.Future
@@ -20,10 +20,24 @@ class AuthenticationService @Inject()(daemonCache: DaemonCache, ecdsa: ECDSAServ
   import co.ledger.wallet.daemon.services.AuthenticationService.AuthContextContext._
 
   def authorize(request: Request)(implicit ec: ExecutionContext): Future[Unit] = {
+    attemptAuthorize(request).rescue({
+      case ex: UserNotFoundException =>
+        if (DaemonConfiguration.isWhiteListDisabled)
+          daemonCache.createUser(HexUtils.valueOf(request.authContext.pubKey), 0).asTwitter().flatMap({_ =>
+            attemptAuthorize(request)
+          })
+        else
+          Future.exception(AuthenticationFailedException(ex.getMessage))
+      case error => throw error
+    })
+  }
+
+  private def attemptAuthorize(request: Request)(implicit ec: ExecutionContext): Future[Unit] = {
     try {
       val pubKey = request.authContext.pubKey
       daemonCache.getUser(HexUtils.valueOf(pubKey)) map {
-        case None => throw AuthenticationFailedException("User doesn't exist")
+        case None =>
+          throw UserNotFoundException()
         case Some(user) =>
           val loginAtAsLong = request.authContext.time
           val loginAt = new Date(loginAtAsLong * 1000)
@@ -42,11 +56,13 @@ class AuthenticationService @Inject()(daemonCache: DaemonCache, ecdsa: ECDSAServ
       case _: IllegalStateException => throw AuthenticationFailedException("Missing authorization header")
     }
   }
+
 }
 
 object AuthenticationService {
 
   case class AuthenticationFailedException(msg: String) extends Exception(msg)
+  case class UserNotFoundException() extends Exception("User doesn't exist")
   case class AuthContext(pubKey: Array[Byte], time: Long, signedMessage: Array[Byte])
   object AuthContextContext {
     private val AuthContextField = Request.Schema.newField[AuthContext]()
