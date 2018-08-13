@@ -21,3 +21,6 @@ daemon/project
 
 *.db
 *.log
+
+# conf file as it is sample now
+daemon/src/main/resources/*.conf
