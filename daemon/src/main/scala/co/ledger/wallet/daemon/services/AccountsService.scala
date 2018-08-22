@@ -36,6 +36,10 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
     defaultDaemonCache.getFreshAddresses(accountIndex, user.pubKey, poolName, walletName)
   }
 
+  def accountDerivationPath(accountIndex: Int, user: User, poolName: String, walletName: String): Future[String] = {
+    defaultDaemonCache.getDerivationPath(accountIndex, user.pubKey, poolName, walletName)
+  }
+
   def nextAccountCreationInfo(user: User, poolName: String, walletName: String, accountIndex: Option[Int]): Future[AccountDerivationView] = {
     defaultDaemonCache.getNextAccountCreationInfo(user.pubKey, poolName, walletName, accountIndex).map(_.view)
   }
