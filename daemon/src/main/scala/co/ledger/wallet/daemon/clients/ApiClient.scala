@@ -43,6 +43,7 @@ class ApiClient(implicit val ec: ExecutionContext) {
       case "viacoin" => "/blockchain/v2/via/fees"
       case "vertcoin" => "/blockchain/v2/vtc/fees"
       case "digibyte" => "/blockchain/v2/dgb/fees"
+      case "bitcoin_cash" => "/blockchain/v2/abc/fees"
       case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
     }
     val request = Request(Method.Get, path)
