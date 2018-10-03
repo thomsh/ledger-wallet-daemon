@@ -1,7 +1,7 @@
 package co.ledger.wallet.daemon.models
 
 import co.ledger.core
-import co.ledger.core.BitcoinLikePickingStrategy
+import co.ledger.core.{BitcoinLikePickingStrategy, OperationOrderKey}
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.clients.ClientFactory
@@ -92,9 +92,9 @@ object Account {
 
     def operations(offset: Long, batch: Int, fullOp: Int): Future[Seq[Operation]] = {
       (if (fullOp > 0) {
-        coreA.queryOperations().offset(offset).limit(batch).complete().execute()
+        coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).offset(offset).limit(batch).complete().execute()
       } else {
-        coreA.queryOperations().offset(offset).limit(batch).partial().execute()
+        coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).offset(offset).limit(batch).partial().execute()
       }).map { operations =>
         if (operations.size() <= 0) { List[Operation]() }
         else { operations.asScala.map { o => Operation.newInstance(o, self, wallet)} }
