@@ -32,8 +32,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   val name: String = coreW.getName
   val currency: Currency = Currency.newInstance(coreW.getCurrency)
 
-  def lastBlockHeight: Future[Long] =
-    if (currentBlockHeight.get() < 0) {
+  def lastBlockHeight: Future[Long] = {
       coreW.getLastBlock()
         .map { lastBlock =>
           updateBlockHeight(lastBlock.getHeight); currentBlockHeight.get()
@@ -44,8 +43,6 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
         case others =>
           throw others
       }
-    } else {
-      Future.successful(currentBlockHeight.get())
     }
 
   def updateBlockHeight(newHeight: Long): Unit = {

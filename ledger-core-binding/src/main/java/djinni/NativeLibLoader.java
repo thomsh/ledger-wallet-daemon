@@ -67,6 +67,8 @@ public class NativeLibLoader {
 
     private NativeLibLoader() { }
 
+    private static String OS = System.getProperty("os.name").toLowerCase();
+
     // Load native libs from canonical locations
     public static void loadLibs() throws URISyntaxException, IOException {
         System.out.println("Loading");
@@ -172,8 +174,21 @@ public class NativeLibLoader {
         loadLibrary(tempLib.getAbsolutePath());
     }
 
+    private static boolean canBeLoaded(String filepath) {
+        String expectedExtension;
+        if (OS.contains("win"))
+            expectedExtension = "dll";
+        else if (OS.contains("mac"))
+            expectedExtension = "dylib";
+        else
+            expectedExtension = "so";
+        return filepath.endsWith(expectedExtension);
+    }
+
     private static void loadLibrary(String abspath) {
-        System.load(abspath);
-        log.log(Level.INFO, "Loaded " + abspath);
+        if (canBeLoaded(abspath)) {
+            System.load(abspath);
+            log.log(Level.INFO, "Loaded " + abspath);
+        }
     }
 }
