@@ -1,9 +1,10 @@
 package co.ledger.wallet.daemon.models
 
+import java.util
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import co.ledger.core
-import co.ledger.core.implicits
+import co.ledger.core.{Address, implicits}
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.exceptions.InvalidArgumentException
@@ -52,6 +53,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   def walletView: Future[WalletView] = {
     getBalance.map { b => WalletView(name, accountLen.get(), b, currency.currencyView, configuration) }
+  }
+
+  def accountDerivationPathInfo(index: Int): Future[String] = {
+    coreW.getAccount(index).flatMap(_.getFreshPublicAddresses()).map(_.get(0).getDerivationPath)
   }
 
   def account(index: Int): Future[Option[Account]] = {

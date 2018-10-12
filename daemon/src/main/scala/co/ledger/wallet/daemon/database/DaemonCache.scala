@@ -65,6 +65,18 @@ trait DaemonCache {
     * @param walletName the name of wallet the account belongs to.
     * @return a Future of a sequence of instances of `co.ledger.wallet.daemon.models.Account`.
     */
+  def getDerivationPath(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[String]
+
+
+  /**
+    * Getter for fresh addresses of specified account.
+    *
+    * @param accountIndex the unique index of specified account.
+    * @param pubKey the publick key of instance of `co.ledger.wallet.daemon.DefaultDaemonCache.User`.
+    * @param poolName the name of wallet pool the account belongs to.
+    * @param walletName the name of wallet the account belongs to.
+    * @return a Future of a sequence of instances of `co.ledger.wallet.daemon.models.Account`.
+    */
   def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[String]]
 
   /**

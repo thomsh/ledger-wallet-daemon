@@ -116,6 +116,26 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
   }
 
   /**
+    * End point queries for derivation path with specified pool, wallet name and unique account index.
+    *
+    */
+  get("/pools/:pool_name/wallets/:wallet_name/accounts/:account_index/path") { request: AccountRequest =>
+    info(s"GET account derivation path $request")
+    accountsService.accountDerivationPath(request.account_index, request.user, request.pool_name, request.wallet_name).recover {
+      case _: WalletPoolNotFoundException => responseSerializer.serializeBadRequest(
+        Map("response" -> "Wallet pool doesn't exist", "pool_name" -> request.pool_name),
+        response)
+      case _: WalletNotFoundException => responseSerializer.serializeBadRequest(
+        Map("response"->"Wallet doesn't exist", "wallet_name" -> request.wallet_name),
+        response)
+      case _: AccountNotFoundException => responseSerializer.serializeBadRequest(
+        Map("response"->"Account doesn't exist", "account_index" -> request.account_index),
+        response)
+      case e: Throwable => responseSerializer.serializeInternalError(response, e)
+    }
+  }
+
+  /**
     * End point queries for operation views with specified pool, wallet name, and unique account index.
     *
     */
