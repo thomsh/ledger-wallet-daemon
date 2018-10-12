@@ -30,7 +30,7 @@ class ServerImpl extends HttpServer {
       .filter[LWDAutenticationFilter]
       .add[AuthenticationFilter, AccountsController]
       .add[AuthenticationFilter, CurrenciesController]
-      .add[AuthenticationFilter, StatusController]
+      .add[StatusController]
       .add[AuthenticationFilter, WalletPoolsController]
       .add[AuthenticationFilter, WalletsController]
       .add[AuthenticationFilter, TransactionsController]
