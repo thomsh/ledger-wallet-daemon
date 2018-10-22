@@ -22,11 +22,13 @@ class Currency(coreC: core.Currency) {
     newNetworkParamsView(coreC, family)
   )
 
-  def parseUnsignedTransaction(rawTx: Array[Byte]) = family match {
+  def parseUnsignedTransaction(rawTx: Array[Byte]): core.BitcoinLikeTransaction = family match {
     case CurrencyFamily.BITCOIN => core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(coreC, rawTx)
     case _ => throw new UnsupportedOperationException(s"No parser found for currency family '$family'")
   }
 
+
+  def validateAddress(address: String): Boolean = core.Address.isValid(address, coreC)
 
   def convertAmount(amount: Long): core.Amount = core.Amount.fromLong(coreC, amount)
 

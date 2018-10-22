@@ -1,7 +1,5 @@
 package co.ledger.wallet.daemon.controllers
 
-import javax.inject.Inject
-
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.controllers.requests.{CommonMethodValidations, RichRequest}
 import co.ledger.wallet.daemon.controllers.responses.ResponseSerializer
@@ -9,8 +7,9 @@ import co.ledger.wallet.daemon.exceptions._
 import co.ledger.wallet.daemon.services.CurrenciesService
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
-import com.twitter.finatra.request.RouteParam
+import com.twitter.finatra.request.{QueryParam, RouteParam}
 import com.twitter.finatra.validation.{MethodValidation, ValidationResult}
+import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
@@ -36,7 +35,6 @@ class CurrenciesController @Inject()(currenciesService: CurrenciesService) exten
       case _: WalletPoolNotFoundException => responseSerializer.serializeBadRequest(
         Map("response" -> "Wallet pool doesn't exist", "pool_name" -> poolName),
         response)
-      case _: CurrencyNotFoundException =>
       case e: Throwable => responseSerializer.serializeInternalError(response, e)
     }
   }
@@ -56,10 +54,35 @@ class CurrenciesController @Inject()(currenciesService: CurrenciesService) exten
     }
   }
 
+  /**
+    * Endpoint validating the given address. Response boolean value true if is valid,
+    * false otherwise.
+    *
+    */
+  get(s"/pools/:pool_name/currencies/:currency_name/validate") { request: AddressValidatingRequest =>
+    currenciesService.validateAddress(request.address, request.currency_name, request.pool_name, request.user.pubKey).recover {
+      case _ : CurrencyNotFoundException | _: WalletPoolNotFoundException =>
+        responseSerializer.serializeBadRequest(Map(
+            "response" -> "Wallet pool or currency doesn't exist",
+            "pool_name" -> request.pool_name,
+            "currency_name" -> request.currency_name),
+          response
+      )
+      case e: Throwable => responseSerializer.serializeInternalError(response, e)
+    }
+
+
+  }
+
   private val responseSerializer: ResponseSerializer = ResponseSerializer.newInstance()
 }
 
 object CurrenciesController {
+  case class AddressValidatingRequest(@RouteParam pool_name: String,
+                                      @RouteParam currency_name: String,
+                                      @QueryParam address: String,
+                                      request: Request) extends RichRequest(request)
+
   case class GetCurrenciesRequest(
                                  @RouteParam pool_name: String,
                                  request: Request

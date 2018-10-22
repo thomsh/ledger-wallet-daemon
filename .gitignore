@@ -18,6 +18,7 @@ daemon/project
 .worksheet
 .idea/
 .DS_Store
+/daemon/src/main/resources/application.conf
 
 *.db
 *.log

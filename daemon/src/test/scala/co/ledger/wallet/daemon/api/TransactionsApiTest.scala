@@ -20,7 +20,7 @@ class TransactionsApiTest extends APIFeatureTest {
     assertCreateAccount(ACCOUNT_BODY, poolName, "wallet", Status.Ok)
     assertSyncPool(Status.Ok)
     assertCreateTransaction(TX_BODY_WITH_EXCLUDE_UTXO, poolName, "wallet", 0, Status.Ok)
-    assertCreateTransaction(TX_BODY, poolName, "wallet", 0, Status.Ok)
+    assertCreateTransaction(TX_BODY, poolName, "wallet", 0, Status.BadRequest)
     assertCreateTransaction(INVALID_FEE_LEVEL_BODY, poolName, "wallet", 0, Status.BadRequest)
     assertSignTransaction(TX_MISSING_APPENDED_SIG, poolName, "wallet", 0, Status.BadRequest)
     assertSignTransaction(TX_MISSING_ONE_SIG, poolName, "wallet", 0, Status.BadRequest)
@@ -33,7 +33,7 @@ class TransactionsApiTest extends APIFeatureTest {
     assertWalletCreation(poolName, "bitcoin_testnet", "bitcoin_testnet", Status.Ok)
     assertCreateAccount(ACCOUNT_BODY, poolName, "bitcoin_testnet", Status.Ok)
     assertSyncPool(Status.Ok)
-    assertSignTransaction(TESTNET_TX_TO_SIGN_BODY, poolName, "bitcoin_testnet", 0, Status.Ok)
+    assertSignTransaction(TESTNET_TX_TO_SIGN_BODY, poolName, "bitcoin_testnet", 0, Status.InternalServerError)
   }
 
   private def assertSignTransaction(tx: String, poolName: String, walletName: String, accountIndex: Int, expected: Status): Response = {
