@@ -255,7 +255,8 @@ object DefaultDaemonCache extends Logging {
 
     def sync(): Future[Seq[SynchronizationResult]] = {
       pools().flatMap { pls =>
-        Future.sequence(pls.values.map { p => p.sync() }.toSeq).map (_.flatten)
+        Future.sequence(pls.values.map { p =>
+          p.sync() }.toSeq).map (_.flatten)
       }
     }
 

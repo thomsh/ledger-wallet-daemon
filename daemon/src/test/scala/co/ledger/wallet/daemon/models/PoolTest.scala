@@ -29,13 +29,21 @@ class PoolTest extends AssertionsForJUnit {
     }
   }, Duration.Inf)
 
-  @Test def verifyWalletsCachedInPool(): Unit = {
+  @Test def verifyWalletInPool(): Unit = {
     assert(Option(wallet) === Await.result(samePool.wallet("test_wallet"), Duration.Inf))
     assert(testPool.name === "test_pool")
     assert(WalletPoolView("test_pool", 1) === Await.result(samePool.view, Duration.Inf))
     assert(notExistingWallet.isEmpty)
     assert(wallet != "wallet")
     assert(testPool != wallet)
+  }
+
+  @Test def verifyWalletsInPool(): Unit = {
+    val (count, wallets) = Await.result(testPool.wallets(0, 100), Duration.Inf)
+    assert(count == 1)
+    assert(wallets.size == 1)
+    assert(List(wallet) == wallets)
+    assert(Await.result(testPool.sync(), Duration.Inf).isEmpty)
   }
 
 }

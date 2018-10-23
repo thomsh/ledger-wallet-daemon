@@ -1,10 +1,9 @@
 package co.ledger.wallet.daemon.models
 
-import java.util
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import co.ledger.core
-import co.ledger.core.{Address, implicits}
+import co.ledger.core.implicits
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.exceptions.InvalidArgumentException
