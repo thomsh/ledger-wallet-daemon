@@ -86,12 +86,12 @@ class WalletsApiTest extends APIFeatureTest {
   }
 
   test("WalletsApi#Post wallet with non exist currency to existing pool") {
-    createPool(WALLET_POOL)
+    createPool("random_pool")
     val expectedErr = ErrorResponseBody(ErrorCode.Bad_Request, Map("response"->"Currency not support", "currency_name"->"non_existing_currency"))
-    val result = assertWalletCreation(WALLET_POOL, "my_wallet", "non_existing_currency", Status.BadRequest)
+    val result = assertWalletCreation("random_pool", "my_wallet", "non_existing_currency", Status.BadRequest)
     val postWalletErr = server.mapper.objectMapper.readValue[ErrorResponseBody](result.contentString)
     assert(expectedErr === postWalletErr)
-    deletePool(WALLET_POOL)
+    deletePool("random_pool")
   }
 
   private def walletFromResponse(response: Response): WalletView = parse[WalletView](response)

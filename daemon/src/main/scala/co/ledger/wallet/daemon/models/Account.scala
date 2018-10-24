@@ -1,8 +1,8 @@
 package co.ledger.wallet.daemon.models
 
 import co.ledger.core
-import co.ledger.core.{BitcoinLikePickingStrategy, OperationOrderKey}
 import co.ledger.core.implicits._
+import co.ledger.core.{BitcoinLikePickingStrategy, OperationOrderKey}
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.clients.ClientFactory
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
@@ -19,7 +19,6 @@ import com.twitter.inject.Logging
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success}
 
 object Account {
 

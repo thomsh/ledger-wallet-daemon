@@ -61,13 +61,14 @@ class WalletTest extends AssertionsForJUnit {
     }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
 
   @Test def verifyWalletActivities(): Unit = {
+    println("first lime in test")
     val accounts = Await.result(testWallet.accounts(), Duration.Inf)
     assert(3 === accounts.size)
-    assert(testAccount === accounts.head)
-    assert(account4 === accounts.tail.head)
-    assert(account6 === accounts.tail.tail.head)
+    assert(testAccount.index === accounts.head.index)
+    assert(account6.index === accounts.tail.head.index)
+    assert(account4.index === accounts.tail.tail.head.index)
     val account = Await.result(testWallet.account(testAccount.index), Duration.Inf)
-    assert(account === accounts.headOption)
+    assert(account.map(_.index) === accounts.headOption.map(_.index))
     val walletView = Await.result(testWallet.walletView, Duration.Inf)
     val accountView = Await.result(testAccount.accountView, Duration.Inf)
     assert(walletView.balance === accountView.balance)

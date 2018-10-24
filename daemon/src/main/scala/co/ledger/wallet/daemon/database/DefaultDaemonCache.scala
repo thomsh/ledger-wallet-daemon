@@ -286,8 +286,8 @@ object DefaultDaemonCache extends Logging {
 
     def addPoolIfNotExit(name: String, configuration: String): Future[Pool] = {
       val dto = PoolDto(name, id, configuration)
-      dbDao.insertPool(dto).flatMap { id =>
-        toCacheAndStartListen(dto, id).map { pool =>
+      dbDao.insertPool(dto).flatMap { poolId =>
+        toCacheAndStartListen(dto, poolId).map { pool =>
           info(LogMsgMaker.newInstance("Pool created").append("name", name).append("user_id", id).toString())
           pool
         }
@@ -313,14 +313,14 @@ object DefaultDaemonCache extends Logging {
       }
     }
 
-    private def toCacheAndStartListen(p: PoolDto, id: Long): Future[Pool] = {
+    private def toCacheAndStartListen(p: PoolDto, poolId: Long): Future[Pool] = {
       cachedPools.get(p.name) match {
         case Some(pool) => Future.successful(pool)
         case None => Pool.newCoreInstance(p).flatMap { coreP =>
-          cachedPools.put(p.name, Pool.newInstance(coreP, id))
+          cachedPools.put(p.name, Pool.newInstance(coreP, poolId))
           debug(s"Add ${cachedPools(p.name)} to $self cache")
-          cachedPools(p.name).registerEventReceiver(new NewOperationEventReceiver(id, opsCache))
-          cachedPools(p.name).startCacheAndRealTimeObserver().map { _ => cachedPools(p.name)}
+          cachedPools(p.name).registerEventReceiver(new NewOperationEventReceiver(poolId, opsCache))
+          cachedPools(p.name).startRealTimeObserver().map { _ => cachedPools(p.name)}
         }
       }
     }
@@ -342,5 +342,4 @@ object DefaultDaemonCache extends Logging {
     override def toString: String = s"User(id: $id, pubKey: $pubKey)"
 
   }
-
 }

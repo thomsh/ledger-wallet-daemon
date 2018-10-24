@@ -174,7 +174,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging wit
     *
     * @return a future of Unit.
     */
-  def startCacheAndRealTimeObserver(): Future[Unit] = {
+  def startRealTimeObserver(): Future[Unit] = {
     coreP.getWalletCount().map { count =>
       coreP.getWallets(0, count).map { coreWs =>
         coreWs.asScala.map { coreW => startListen(Wallet.newInstance(coreW, self)) }

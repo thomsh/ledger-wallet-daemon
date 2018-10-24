@@ -1,11 +1,12 @@
 package co.ledger.wallet.daemon.models
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.atomic.AtomicLong
 
 import co.ledger.core
 import co.ledger.core.implicits
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
+import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.exceptions.InvalidArgumentException
 import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
@@ -24,8 +25,6 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
   implicit def asArrayList[T](input: Seq[T]): AsArrayList[T] = new AsArrayList[T](input)
-  private[this] val cachedAccounts: Cache[Int, Account] = newCache(initialCapacity = INITIAL_ACCOUNT_CAP_PER_WALLET)
-  private[this] val accountLen: AtomicInteger = new AtomicInteger(0)
   private val configuration: Map[String, Any] = Map[String, Any]()
   private[this] val currentBlockHeight: AtomicLong = new AtomicLong(-1)
 
@@ -35,13 +34,12 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   def lastBlockHeight: Future[Long] = {
       coreW.getLastBlock()
         .map { lastBlock =>
-          updateBlockHeight(lastBlock.getHeight); currentBlockHeight.get()
+          updateBlockHeight(lastBlock.getHeight)
+          currentBlockHeight.get()
         } recover {
-        case ex: BlockNotFoundException =>
+        case _: BlockNotFoundException =>
           updateBlockHeight(0)
-          0L
-        case others =>
-          throw others
+          currentBlockHeight.get()
       }
     }
 
@@ -51,7 +49,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   }
 
   def walletView: Future[WalletView] = {
-    getBalance.map { b => WalletView(name, accountLen.get(), b, currency.currencyView, configuration) }
+    for {
+      balance <- getBalance
+      ac <- coreW.getAccountCount()
+    } yield WalletView(name, ac, balance, currency.currencyView, configuration)
   }
 
   def accountDerivationPathInfo(index: Int): Future[String] = {
@@ -59,9 +60,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   }
 
   def account(index: Int): Future[Option[Account]] = {
-    cachedAccounts.get(index) match {
-      case Some(account) => Future.successful(Option(account))
-      case None => toCacheAndStartListen(accountLen.get()).map { _ => cachedAccounts.get(index)}
+    coreW.getAccount(index).map { coreA =>
+      Some(Account.newInstance(coreA, self))
+    }.recover {
+      case _: implicits.AccountNotFoundException => Option.empty[Account]
     }
   }
 
@@ -80,8 +82,14 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   def accounts(): Future[Seq[Account]] = {
     coreW.getAccountCount().flatMap { count =>
-      if(count == accountLen.get()) { Future.successful(cachedAccounts.values.toSeq) }
-      else { toCacheAndStartListen(accountLen.get()).map { _ => cachedAccounts.values.toSeq }}
+      coreW.getAccounts(0, count).map { coreAs =>
+        coreAs.asScala.map { coreA =>
+          println(coreA.getIndex)
+          val account = Account.newInstance(coreA, self)
+          account.startRealTimeObserver()
+          account
+        }.toList
+      }
     }
   }
 
@@ -110,18 +118,19 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   private def accountCreationEpilogue(coreAccount: Future[core.Account], accountIndex: Int): Future[Account] = {
     coreAccount.map { coreA =>
       info(LogMsgMaker.newInstance("Account created").append("index", coreA.getIndex).append("wallet_name", name).toString())
-      toCacheAndStartListen(accountLen.get()).map { _ =>
-        val account = cachedAccounts(coreA.getIndex)
-        account.sync(pool.name)
-        account
-      }
-    }.recover {
-      case e: implicits.InvalidArgumentException => Future.failed(InvalidArgumentException(e.getMessage))
+      Account.newInstance(startListen(coreA), self)
+    }.recoverWith {
+      case e: implicits.InvalidArgumentException =>
+        Future.failed(InvalidArgumentException(e.getMessage))
       case _: implicits.AccountAlreadyExistsException =>
-        warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", name).toString())
-        if(cachedAccounts.contains(accountIndex)) { Future.successful(cachedAccounts(accountIndex)) }
-        else { toCacheAndStartListen(accountLen.get()).map { _ => cachedAccounts(accountIndex) }}
-    }.flatten
+        for {
+          _ <- Future(warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", name).toString()))
+          a <- coreW.getAccount(accountIndex).map { coreA =>
+            startListen(coreA)
+            Account.newInstance(coreA, self)
+          }
+        } yield a
+    }
   }
 
   def syncAccounts(poolName: String): Future[Seq[SynchronizationResult]] = {
@@ -130,13 +139,13 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     }
   }
 
-  def startCacheAndRealTimeObserver(): Future[Unit] = {
-    toCacheAndStartListen(accountLen.get())
-  }
+  def startCacheAndRealTimeObserver(): Future[Unit] = startListen
 
   def stopRealTimeObserver(): Unit = {
-    debug(LogMsgMaker.newInstance("Stop real time observer").append("wallet", self).toString())
-    cachedAccounts.values.toSeq.foreach { account => account.stopRealTimeObserver() }
+    accounts().map { as =>
+      debug(LogMsgMaker.newInstance("Stop real time observer").append("wallet", self).append("account_count", as.size).toString())
+      as.map { a => a.stopRealTimeObserver() }
+    }
   }
 
   override def equals(that: Any): Boolean = {
@@ -152,26 +161,20 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   override def toString: String = s"Wallet(name: $name, currency: ${currency.name})"
 
-  private def toCacheAndStartListen(offset: Int): Future[Unit] = {
-    if (offset < accountLen.get()) { Future { info(s"Wallet $name cache was already updated")}}
-    else {
-      coreW.getAccountCount().flatMap { count =>
-        if (count == offset) {
-          Future(info(s"Wallet $name cache is up to date"))
-        } else if (count < offset) {
-          Future(warn(s"Offset should be less than count, possible race condition"))
-        } else {
-          coreW.getAccounts(offset, count).map { coreAs =>
-            coreAs.asScala.foreach { coreA =>
-              cachedAccounts.put(coreA.getIndex, Account.newInstance(coreA, self))
-              debug(s"Add ${cachedAccounts(coreA.getIndex)} to $self cache")
-              cachedAccounts(coreA.getIndex).startRealTimeObserver()
-            }
-            accountLen.updateAndGet(n => Math.max(n, count))
-          }
+  private def startListen(): Future[Unit] = {
+    coreW.getAccountCount().flatMap { count =>
+      coreW.getAccounts(0, count).map { coreAs =>
+          coreAs.asScala.foreach { coreA => startListen(coreA) }
         }
       }
     }
+
+  private def startListen(coreA: core.Account): core.Account = {
+    if (DaemonConfiguration.realTimeObserverOn && !coreA.isObservingBlockchain) {
+      coreA.startBlockchainObservation()
+      debug(LogMsgMaker.newInstance(s"Real time observer on ${coreA.isObservingBlockchain}").append("account", coreA.getIndex).toString())
+    }
+    coreA
   }
 
   private def getBalance: Future[Long] = {
