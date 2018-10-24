@@ -32,12 +32,15 @@ object Account {
     private val isBitcoin: Boolean = coreA.isInstanceOfBitcoinLikeAccount
 
     def balance: Future[Long] = coreA.getBalance().map { balance =>
-      println(s"Hello account $index: ${balance.toLong}")
+      debug(s"Account $index, balance: ${balance.toLong}")
       balance.toLong
     }
 
-    def accountView: Future[AccountView] = balance.map { b =>
-      AccountView(wallet.name, index, b, coreA.getRestoreKey, wallet.currency.currencyView)
+    def accountView: Future[AccountView] = {
+      for {
+        ba <- balance
+        ops <- operationCounts
+      } yield AccountView(wallet.name, index, ba, ops, coreA.getRestoreKey, wallet.currency.currencyView)
     }
 
     def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
@@ -99,6 +102,11 @@ object Account {
         else { operations.asScala.map { o => Operation.newInstance(o, self, wallet)} }
       }
     }
+
+    def operationCounts: Future[Map[core.OperationType, Int]] =
+      coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).partial().execute().map { operations =>
+        operations.asScala.toList.groupBy(op => op.getOperationType).map { case (optType, opts) => (optType, opts.size)}
+      }
 
     def freshAddresses(): Future[Seq[String]] = {
       coreA.getFreshPublicAddresses().map(_.asScala.map(_.toString))
@@ -183,6 +191,7 @@ case class AccountView(
                         @JsonProperty("wallet_name") walletName: String,
                         @JsonProperty("index") index: Int,
                         @JsonProperty("balance") balance: Long,
+                        @JsonProperty("operation_count") operationCounts: Map[core.OperationType, Int],
                         @JsonProperty("keychain") keychain: String,
                         @JsonProperty("currency") currency: CurrencyView
                       )

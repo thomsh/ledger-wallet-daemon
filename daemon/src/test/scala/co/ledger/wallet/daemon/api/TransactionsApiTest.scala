@@ -34,12 +34,21 @@ class TransactionsApiTest extends APIFeatureTest {
     assertCreateAccount(ACCOUNT_BODY, poolName, "bitcoin_testnet", Status.Ok)
     assertSyncPool(Status.Ok)
     assertSignTransaction(TESTNET_TX_TO_SIGN_BODY, poolName, "bitcoin_testnet", 0, Status.InternalServerError)
+    assertGetAccount(poolName, "bitcoin_testnet", 0, Status.Ok)
   }
 
   private def assertSignTransaction(tx: String, poolName: String, walletName: String, accountIndex: Int, expected: Status): Response = {
     server.httpPost(
       s"/pools/$poolName/wallets/$walletName/accounts/$accountIndex/transactions/sign",
       tx,
+      headers = defaultHeaders,
+      andExpect = expected
+    )
+  }
+
+  private def assertGetAccount(poolName: String, walletName: String, accountIndex: Int, expected: Status): Response = {
+    server.httpGet(
+      s"/pools/$poolName/wallets/$walletName/accounts/$accountIndex",
       headers = defaultHeaders,
       andExpect = expected
     )
