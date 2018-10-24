@@ -6,7 +6,7 @@ import co.ledger.wallet.daemon.mappers.AuthenticationExceptionMapper
 import co.ledger.wallet.daemon.modules.{DaemonCacheModule, DaemonJacksonModule}
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.finatra.http.HttpServer
-import com.twitter.finatra.http.filters.{AccessLoggingFilter, CommonFilters}
+import com.twitter.finatra.http.filters.{AccessLoggingFilter, CommonFilters, LoggingMDCFilter, TraceIdMDCFilter}
 import com.twitter.finatra.http.routing.HttpRouter
 import djinni.NativeLibLoader
 
