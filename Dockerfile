@@ -8,7 +8,7 @@ RUN ./docker/build.sh
 
 #### RUN STEP ###
 FROM debian:stretch-slim
-ENV JDK_DEBIAN_VERSION=8u181-b13-1~deb9u1
+ENV JDK_DEBIAN_VERSION=8u181-b13-2~deb9u1
 ENV HTTP_PORT 9200
 ENV ADMIN_PORT 0
 ENV STAGE dev
