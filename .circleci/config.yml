@@ -1,0 +1,106 @@
+version: 2.1
+
+aliases:
+  - &env_vars
+    name: Setup Docker namespace environment variable
+    command: |
+      echo 'export DOCKER_NAMESPACE="${DOCKER_ORGANIZATION:-${DOCKER_USERNAME}}"' >> $BASH_ENV
+      echo 'export PROJECT_NAME=$(echo $CIRCLE_PROJECT_REPONAME | sed "s/[^[:alnum:]_.-]/_/g")' >> $BASH_ENV
+
+jobs:
+  build_docker_image:
+    machine: true
+    steps:
+      - checkout
+
+      - run: *env_vars
+
+      - run:
+          name: Build Docker image
+          command: |
+            # This variable may be absent if the CircleCI workflow is being triggered by a forked PR
+            docker_args=
+            if [ -n "${DOCKER_NAMESPACE}" ]; then
+              docker_args="-t ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1}"
+              echo "Executing Docker build with the following arguments : ${docker_args}"
+            fi
+            docker build ${docker_args} .
+
+      - run:
+          name: Save Docker image to the workspace
+          command: |
+            mkdir -p ~/workspace
+            if [ -n "${DOCKER_NAMESPACE}" ]; then
+              docker save -o ~/workspace/docker_image.tar ${DOCKER_NAMESPACE}/${PROJECT_NAME}
+            else
+              # Create a placeholder file to prevent the 'persist_to_workspace' step from failing
+              touch ~/workspace/docker_image.tar
+            fi
+
+      - persist_to_workspace:
+          root: ~/workspace
+          paths:
+            - docker_image.tar
+
+  publish_docker_image:
+    machine: true
+    steps:
+      - run: *env_vars
+
+      - attach_workspace:
+          at: ~/workspace
+
+      - run: docker load -i ~/workspace/docker_image.tar
+
+      - run:
+          name: Add Docker tag on the image
+          command: |
+            if [ -n "${CIRCLE_BRANCH}" -a -z "${CIRCLE_TAG}" ]; then
+              if [ "${CIRCLE_BRANCH}" = "master" ]; then
+                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:latest"
+              else
+                BRANCH=$(echo $CIRCLE_BRANCH | sed 's/[^[:alnum:]_.-]/_/g')
+                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${BRANCH}"
+              fi
+
+            elif [ -n "${CIRCLE_TAG}" -a -z "${CIRCLE_BRANCH}" ]; then
+              TAG=$(echo $CIRCLE_TAG | sed 's/[^[:alnum:]_.-]/_/g')
+              docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${TAG}"
+
+            else
+              echo "Unexpected condition state :" >&2
+              echo "The build should be either commit-triggered or tag-triggered" >&2
+              echo "So CircleCI should provide either the BRANCH or the TAG environment variable" >&2
+              exit 1
+            fi
+
+            echo "Adding the following tag on the Docker image : ${docker_tag}"
+            docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} ${docker_tag}
+
+      - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
+      - run: docker push ${DOCKER_NAMESPACE}/${PROJECT_NAME}
+
+workflows:
+  build_docker_image:
+    jobs:
+      - build_docker_image:
+          filters:
+            branches:
+              only:
+                - develop
+                - master
+                - /^pull\/.*$/
+            tags:
+              only: /.*/
+
+      - publish_docker_image:
+          requires:
+            - build_docker_image
+          filters:
+            branches:
+              only:
+                - develop
+                - master
+            tags:
+              only: /.*/
