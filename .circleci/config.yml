@@ -59,12 +59,12 @@ jobs:
               if [ "${CIRCLE_BRANCH}" = "master" ]; then
                 docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:latest"
               else
-                BRANCH=$(echo $CIRCLE_BRANCH | sed 's/[^[:alnum:]_.-/]/_/g')
+                BRANCH=$(echo $CIRCLE_BRANCH | sed 's/[^[:alnum:]_.-]/_/g')
                 docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${BRANCH}"
               fi
 
             elif [ -n "${CIRCLE_TAG}" -a -z "${CIRCLE_BRANCH}" ]; then
-              TAG=$(echo $CIRCLE_TAG | sed 's/[^[:alnum:]_.-/]/_/g')
+              TAG=$(echo $CIRCLE_TAG | sed 's/[^[:alnum:]_.-]/_/g')
               docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${TAG}"
 
             else
