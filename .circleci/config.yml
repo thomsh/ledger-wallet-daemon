@@ -56,26 +56,22 @@ jobs:
           name: Add Docker tag on the image
           command: |
             if [ -n "${CIRCLE_BRANCH}" -a -z "${CIRCLE_TAG}" ]; then
-              if [ "${CIRCLE_BRANCH}" = "master" ]; then
-                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:latest"
-              else
-                BRANCH=$(echo $CIRCLE_BRANCH | sed 's/[^[:alnum:]_.-]/_/g')
-                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${BRANCH}"
-              fi
+              echo "The publish job is not planned to run on a branch commit" >&2
+              exit 1
 
             elif [ -n "${CIRCLE_TAG}" -a -z "${CIRCLE_BRANCH}" ]; then
               TAG=$(echo $CIRCLE_TAG | sed 's/[^[:alnum:]_.-]/_/g')
               docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${TAG}"
 
+              echo "Adding the following tags on the Docker image : ${docker_tag} & latest"
+              docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} ${docker_tag}
+              docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} latest
             else
               echo "Unexpected condition state :" >&2
               echo "The build should be either commit-triggered or tag-triggered" >&2
               echo "So CircleCI should provide either the BRANCH or the TAG environment variable" >&2
               exit 1
             fi
-
-            echo "Adding the following tag on the Docker image : ${docker_tag}"
-            docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} ${docker_tag}
 
       - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 
@@ -92,7 +88,7 @@ workflows:
                 - master
                 - /^pull\/.*$/
             tags:
-              only: /.*/
+              only: /v.*/
 
       - publish_docker_image:
           requires:
@@ -100,7 +96,5 @@ workflows:
           filters:
             branches:
               only:
-                - develop
-                - master
             tags:
-              only: /.*/
+              only: /v.*/
