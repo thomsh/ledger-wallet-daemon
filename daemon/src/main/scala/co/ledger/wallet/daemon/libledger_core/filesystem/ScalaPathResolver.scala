@@ -3,6 +3,7 @@ package co.ledger.wallet.daemon.libledger_core.filesystem
 import java.io.File
 
 import co.ledger.core.PathResolver
+import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 
 class ScalaPathResolver(identifier: String) extends PathResolver {
   /**
@@ -37,8 +38,6 @@ class ScalaPathResolver(identifier: String) extends PathResolver {
     resolvedPath.getAbsolutePath
   }
   lazy val installDirectory: File = {
-    import java.net.URLDecoder
-    val jarPath = URLDecoder.decode(classOf[Nothing].getProtectionDomain.getCodeSource.getLocation.getPath, "UTF-8")
-    new File(new File(jarPath).getParentFile, identifier)
+    new File(new File(DaemonConfiguration.coreDataPath), identifier)
   }
 }

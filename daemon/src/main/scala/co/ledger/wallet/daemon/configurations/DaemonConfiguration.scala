@@ -69,4 +69,6 @@ object DaemonConfiguration {
 
   val isPrintCoreLibLogsEnabled: Boolean = config.hasPath("debug.print_core_logs") && config.getBoolean("debug.print_core_logs")
 
+  lazy val coreDataPath: String = Try(config.getString("core_data_path")).getOrElse("./core_data")
+
 }
