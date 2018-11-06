@@ -1,5 +1,7 @@
 package co.ledger.wallet.daemon.models
 
+import java.util.{Calendar, Date}
+
 import co.ledger.core
 import co.ledger.core.implicits._
 import co.ledger.core.{BitcoinLikePickingStrategy, OperationOrderKey}
@@ -17,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.google.common.primitives.UnsignedInteger
 import com.twitter.inject.Logging
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -107,6 +110,48 @@ object Account {
       coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).partial().execute().map { operations =>
         operations.asScala.toList.groupBy(op => op.getOperationType).map { case (optType, opts) => (optType, opts.size)}
       }
+
+    def balances(start: String, end: String, timePeriod: core.TimePeriod): Future[List[Long]] = {
+      coreA.getBalanceHistory(start, end, timePeriod).map { balances =>
+        balances.asScala.toList.map { ba => ba.toLong }
+      }
+    }
+
+    // TODO: refactor this part once lib-core provides the feature
+    def operationsCounts(start: Date, end: Date, timePeriod: core.TimePeriod): Future[List[Map[core.OperationType, Int]]] = {
+      coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).partial().execute().map { operations =>
+        val ops = operations.asScala.toList.filter( op => op.getDate.compareTo(start) >= 0 && op.getDate.compareTo(end) <= 0)
+        filter(start, 1, end, standardTimePeriod(timePeriod), ops, Nil)
+      }
+    }
+
+    @tailrec
+    private def filter(start: Date, i: Int, end: Date, timePeriod: Int, operations: List[core.Operation], preResult: List[Map[core.OperationType, Int]]): List[Map[core.OperationType, Int]] = {
+      def searchResult(condition: core.Operation => Boolean): Map[core.OperationType, Int] =
+        operations.filter(condition).groupBy(op => op.getOperationType).map { case(optType, opts) => (optType, opts.size) }
+
+      val (begin, next) = {
+        val calendar = Calendar.getInstance()
+        calendar.setTime(start)
+        calendar.add(timePeriod, i - 1)
+        val begin = calendar.getTime
+        calendar.add(timePeriod, 1)
+        (begin, calendar.getTime)
+      }
+      if (end.after(next)) {
+        val result = searchResult(op => op.getDate.compareTo(begin) >= 0 && op.getDate.compareTo(next) < 0)
+        filter(start, i + 1, end, timePeriod, operations, preResult:::List(result))
+      } else {
+        val result = searchResult(op => op.getDate.compareTo(begin) >= 0 && op.getDate.compareTo(end) <= 0)
+        preResult ::: List(result)
+      }
+    }
+
+    private def standardTimePeriod(timePeriod: core.TimePeriod): Int = timePeriod match {
+      case core.TimePeriod.DAY => Calendar.DATE
+      case core.TimePeriod.MONTH => Calendar.MONTH
+      case core.TimePeriod.WEEK => Calendar.WEEK_OF_MONTH
+    }
 
     def freshAddresses(): Future[Seq[String]] = {
       coreA.getFreshPublicAddresses().map(_.asScala.map(_.toString))
