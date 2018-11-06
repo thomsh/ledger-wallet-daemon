@@ -95,6 +95,6 @@ workflows:
             - build_docker_image
           filters:
             branches:
-              only:
+              ignore: /.*/
             tags:
               only: /v.*/
