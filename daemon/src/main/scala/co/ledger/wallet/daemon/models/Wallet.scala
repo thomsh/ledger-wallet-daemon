@@ -20,7 +20,7 @@ import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
-class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Logging with GenCache {
+class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Logging {
   private[this] val self = this
 
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
@@ -139,7 +139,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     }
   }
 
-  def startCacheAndRealTimeObserver(): Future[Unit] = startListen
+  def startCacheAndRealTimeObserver(): Future[Unit] = startListen()
 
   def stopRealTimeObserver(): Unit = {
     accounts().map { as =>

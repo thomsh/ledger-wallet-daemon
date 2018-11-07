@@ -1,8 +1,9 @@
 package co.ledger.wallet.daemon.api
 
+import co.ledger.core
 import co.ledger.wallet.daemon.controllers.responses.{ErrorCode, ErrorResponseBody}
 import co.ledger.wallet.daemon.models.coins.BitcoinNetworkParamsView
-import co.ledger.wallet.daemon.models.{CurrencyFamily, CurrencyView, UnitView}
+import co.ledger.wallet.daemon.models.{CurrencyView, UnitView}
 import co.ledger.wallet.daemon.utils.APIFeatureTest
 import com.twitter.finagle.http.{Response, Status}
 
@@ -70,7 +71,7 @@ class CurrenciesApiTest extends APIFeatureTest {
   private val CURRENCY_NON_EXIST_POOL = "non_exist_pool"
   private val EXPECTED_BTC_TESTNET = CurrencyView(
     "bitcoin_testnet",
-    CurrencyFamily.BITCOIN,
+    core.WalletType.BITCOIN,
     1,
     "bitcoin",
     List(
@@ -83,7 +84,7 @@ class CurrenciesApiTest extends APIFeatureTest {
   )
   private val EXPECTED_BTC_CURRENCY = CurrencyView(
     "bitcoin",
-    CurrencyFamily.BITCOIN,
+    core.WalletType.BITCOIN,
     0,
     "bitcoin",
     List(

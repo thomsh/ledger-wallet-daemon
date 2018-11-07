@@ -85,7 +85,7 @@ class DaemonCacheTest extends AssertionsForJUnit {
     assert(ops.previous.isEmpty)
     assert(2 === ops.operations.size)
     assert(ops.previous.isEmpty)
-    ops.operations.foreach(op => assertNull(op.transaction))
+    ops.operations.foreach(op => assert(op.transaction.isEmpty))
     val nextOps = Await.result(cache.getNextBatchAccountOperations(user1.get, 0, pool1.get.name, WALLET_NAME, ops.next.get, 0), Duration.Inf)
 
     val previousOfNextOps = Await.result(cache.getPreviousBatchAccountOperations(user1.get, 0, pool1.get.name, WALLET_NAME, nextOps.previous.get, 0), Duration.Inf)

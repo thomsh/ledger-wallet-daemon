@@ -1,6 +1,5 @@
 package co.ledger.wallet.daemon.clients
 
-import co.ledger.wallet.daemon.models.CurrencyFamily
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
 

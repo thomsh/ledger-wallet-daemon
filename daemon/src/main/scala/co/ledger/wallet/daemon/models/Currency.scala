@@ -11,7 +11,7 @@ class Currency(coreC: core.Currency) {
 
   val name: String = coreC.getName
 
-  val family: CurrencyFamily = CurrencyFamily.valueOf(coreC.getWalletType.name())
+  val family: core.WalletType = coreC.getWalletType
 
   lazy val currencyView: CurrencyView = CurrencyView(
     coreC.getName,
@@ -23,7 +23,7 @@ class Currency(coreC: core.Currency) {
   )
 
   def parseUnsignedTransaction(rawTx: Array[Byte]): core.BitcoinLikeTransaction = family match {
-    case CurrencyFamily.BITCOIN => core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(coreC, rawTx)
+    case core.WalletType.BITCOIN => core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(coreC, rawTx)
     case _ => throw new UnsupportedOperationException(s"No parser found for currency family '$family'")
   }
 
@@ -35,8 +35,8 @@ class Currency(coreC: core.Currency) {
   private def newUnitView(coreUnit: core.CurrencyUnit): UnitView =
     UnitView(coreUnit.getName, coreUnit.getSymbol, coreUnit.getCode, coreUnit.getNumberOfDecimal)
 
-  private def newNetworkParamsView(coreCurrency: core.Currency, currencyFamily: CurrencyFamily): NetworkParamsView = currencyFamily match {
-    case CurrencyFamily.BITCOIN => Bitcoin.newNetworkParamsView(coreCurrency.getBitcoinLikeNetworkParameters)
+  private def newNetworkParamsView(coreCurrency: core.Currency, currencyFamily: core.WalletType): NetworkParamsView = currencyFamily match {
+    case core.WalletType.BITCOIN => Bitcoin.newNetworkParamsView(coreCurrency.getBitcoinLikeNetworkParameters)
     case _ => throw new UnsupportedOperationException
   }
 
@@ -62,7 +62,7 @@ object Currency {
 
 case class CurrencyView(
                          @JsonProperty("name") name: String,
-                         @JsonProperty("family") family: CurrencyFamily,
+                         @JsonProperty("family") family: core.WalletType,
                          @JsonProperty("bip_44_coin_type") bip44CoinType: Int,
                          @JsonProperty("payment_uri_scheme") paymentUriScheme: String,
                          @JsonProperty("units") units: Seq[UnitView],

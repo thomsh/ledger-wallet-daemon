@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
 
-class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging with GenCache {
+class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
   private[this] val self = this
 
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global

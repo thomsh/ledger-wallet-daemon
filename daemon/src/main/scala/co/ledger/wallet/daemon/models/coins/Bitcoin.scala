@@ -3,21 +3,19 @@ package co.ledger.wallet.daemon.models.coins
 import java.util.Date
 
 import co.ledger.core
-import co.ledger.wallet.daemon.models.CurrencyFamily
+import co.ledger.core.implicits._
+import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.models.coins.Coin._
 import co.ledger.wallet.daemon.utils
 import co.ledger.wallet.daemon.utils.HexUtils
 import com.fasterxml.jackson.annotation.JsonProperty
 
 import scala.collection.JavaConverters._
-import co.ledger.core.implicits._
-import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object Bitcoin {
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
-  val currencyFamily = CurrencyFamily.BITCOIN
+  val currencyFamily = core.WalletType.BITCOIN
 
   def newNetworkParamsView(from: core.BitcoinLikeNetworkParameters): NetworkParamsView = {
     BitcoinNetworkParamsView(

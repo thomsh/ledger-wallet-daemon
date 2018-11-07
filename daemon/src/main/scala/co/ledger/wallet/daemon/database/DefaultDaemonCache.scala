@@ -96,9 +96,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   def getWalletPools(pubKey: String): Future[Seq[Pool]] = {
-    getHardUser(pubKey).flatMap { user =>
-      user.pools().map { _.values.toSeq }
-    }
+    getHardUser(pubKey).flatMap { user => user.pools() }
   }
 
   def getWallets(offset: Int, batch: Int, poolName: String, pubKey: String): Future[(Int, Seq[Wallet])] = {
@@ -255,8 +253,8 @@ object DefaultDaemonCache extends Logging {
 
     def sync(): Future[Seq[SynchronizationResult]] = {
       pools().flatMap { pls =>
-        Future.sequence(pls.values.map { p =>
-          p.sync() }.toSeq).map (_.flatten)
+        Future.sequence(pls.map { p =>
+          p.sync() }).map (_.flatten)
       }
     }
 
@@ -329,15 +327,14 @@ object DefaultDaemonCache extends Logging {
       * Obtain available pools of this user. The method performs database call(s), adds the missing
       * pools to cache.
       *
-      * @return the resulting pool map with pool name as key. The result map may contain less pools
-      *         than the cached pools.
+      * @return the resulting pools. The result may contain less entities
+      *         than the cached entities.
       */
-    def pools(): Future[concurrent.Map[String, Pool]] = dbDao.getPools(id).flatMap { pools =>
-      val result = new ConcurrentHashMap[String, Pool]().asScala
-      Future.sequence(pools.map { pool =>
-        toCacheAndStartListen(pool, pool.id.get).map { p => result.put(pool.name, p) }
-      }).map { _ => result}
-    }
+    def pools(): Future[Seq[Pool]] = for {
+      poolDtos <- dbDao.getPools(id)
+      pools <- Future.sequence(poolDtos.map { pool => toCacheAndStartListen(pool, pool.id.get)})
+    } yield pools
+
 
     override def toString: String = s"User(id: $id, pubKey: $pubKey)"
 
