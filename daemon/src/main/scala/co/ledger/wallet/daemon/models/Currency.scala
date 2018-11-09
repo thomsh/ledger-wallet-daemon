@@ -22,11 +22,15 @@ class Currency(coreC: core.Currency) {
     newNetworkParamsView(coreC, family)
   )
 
+  def concateSig(sig: Array[Byte]): Array[Byte] = family match {
+    case core.WalletType.BITCOIN => sig ++ coreC.getBitcoinLikeNetworkParameters.getSigHash
+    case _ => sig
+  }
+
   def parseUnsignedTransaction(rawTx: Array[Byte]): core.BitcoinLikeTransaction = family match {
     case core.WalletType.BITCOIN => core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(coreC, rawTx)
     case _ => throw new UnsupportedOperationException(s"No parser found for currency family '$family'")
   }
-
 
   def validateAddress(address: String): Boolean = core.Address.isValid(address, coreC)
 
