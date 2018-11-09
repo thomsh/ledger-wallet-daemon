@@ -52,7 +52,7 @@ object Account {
       if (tx.getInputs.size != signatures.size) throw new scala.IllegalArgumentException("Signatures and transaction inputs size not matching")
       else if (isBitcoin) {
         tx.getInputs.asScala.zipWithIndex.foreach { case (input, index) =>
-          input.pushToScriptSig(signatures(index)._1) // signature
+          input.pushToScriptSig(wallet.currency.concateSig(signatures(index)._1)) // signature
           input.pushToScriptSig(signatures(index)._2) // pubkey
         }
         debug(s"transaction after sign '${HexUtils.valueOf(tx.serialize())}'")
