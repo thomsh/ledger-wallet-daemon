@@ -6,6 +6,7 @@ import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.database.DaemonCache
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.models.Account.Account
+import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 import javax.inject.{Inject, Singleton}
@@ -38,7 +39,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
   }
 
   def accountFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[FreshAddressView]] = {
-    defaultDaemonCache.getFreshAddresses(accountIndex, user.pubKey, poolName, walletName)
+    defaultDaemonCache.getFreshAddresses(accountIndex, user, poolName, walletName)
   }
 
   def accountDerivationPath(accountIndex: Int, user: User, poolName: String, walletName: String): Future[String] = {
@@ -74,10 +75,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
   }
 
   def accountOperation(user: User, uid: String, accountIndex: Int, poolName: String, walletName: String, fullOp: Int): Future[Option[OperationView]] = {
-    defaultDaemonCache.getAccountOperation(user, uid, accountIndex, poolName, walletName, fullOp).flatMap {
-      case Some(op) => op.operationView.map(Option(_))
-      case None => Future.successful(None)
-    }
+    defaultDaemonCache.getAccountOperation(user, uid, accountIndex, poolName, walletName, fullOp)
   }
 
   def createAccount(accountCreationBody: AccountDerivationView, user: User, poolName: String, walletName: String): Future[AccountView] = {

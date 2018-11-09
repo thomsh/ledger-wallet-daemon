@@ -4,6 +4,7 @@ import java.util.UUID
 
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
+import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 
@@ -72,12 +73,12 @@ trait DaemonCache {
     * Getter for fresh addresses of specified account.
     *
     * @param accountIndex the unique index of specified account.
-    * @param pubKey the publick key of instance of `co.ledger.wallet.daemon.DefaultDaemonCache.User`.
+    * @param user the user who can access the account.
     * @param poolName the name of wallet pool the account belongs to.
     * @param walletName the name of wallet the account belongs to.
     * @return a Future of a sequence of instances of `co.ledger.wallet.daemon.models.Account`.
     */
-  def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[FreshAddressView]]
+  def getFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[FreshAddressView]]
 
   /**
     * Getter of account operations batch instances with specified parameters.
@@ -105,7 +106,7 @@ trait DaemonCache {
     *               including transaction information, will be returned.
     * @return a Future of optional `co.ledger.wallet.daemon.models.Operation` instance.
     */
-  def getAccountOperation(user: User, uid: String, accountIndex: Int, poolName: String, walletName: String, fullOp: Int): Future[Option[Operation]]
+  def getAccountOperation(user: User, uid: String, accountIndex: Int, poolName: String, walletName: String, fullOp: Int): Future[Option[OperationView]]
 
   /**
     * Getter of account operations batch instances with specified parameters.
