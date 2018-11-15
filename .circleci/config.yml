@@ -5,7 +5,14 @@ aliases:
     name: Setup Docker namespace environment variable
     command: |
       echo 'export DOCKER_NAMESPACE="${DOCKER_ORGANIZATION:-${DOCKER_USERNAME}}"' >> $BASH_ENV
+      # CircleCI environment variables are not transmitted to jobs triggered by a forked PR
+      # so if the DOCKER_NAMESPACE is empty then fall back to a generic CircleCI-provided variable
+      echo 'export DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-${CIRCLE_USERNAME}}"' >> $BASH_ENV
       echo 'export PROJECT_NAME=$(echo $CIRCLE_PROJECT_REPONAME | sed "s/[^[:alnum:]_.-]/_/g")' >> $BASH_ENV
+      echo 'export GOSS_VERSION="v0.3.6"' >> $BASH_ENV
+      echo 'export GOSS_FILES_PATH="${HOME}/workspace"' >> $BASH_ENV
+
+  - &load_docker_image docker load -i ~/workspace/docker_image.tar
 
 jobs:
   build_docker_image:
@@ -18,29 +25,60 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            # This variable may be absent if the CircleCI workflow is being triggered by a forked PR
-            docker_args=
-            if [ -n "${DOCKER_NAMESPACE}" ]; then
-              docker_args="-t ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1}"
-              echo "Executing Docker build with the following arguments : ${docker_args}"
-            fi
+            docker_args="-t ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1}"
+            echo "Executing Docker build with the following arguments : ${docker_args}"
             docker build ${docker_args} .
 
       - run:
+          name: Create workspace
+          command: mkdir -p ~/workspace
+
+      - run:
           name: Save Docker image to the workspace
-          command: |
-            mkdir -p ~/workspace
-            if [ -n "${DOCKER_NAMESPACE}" ]; then
-              docker save -o ~/workspace/docker_image.tar ${DOCKER_NAMESPACE}/${PROJECT_NAME}
-            else
-              # Create a placeholder file to prevent the 'persist_to_workspace' step from failing
-              touch ~/workspace/docker_image.tar
-            fi
+          command: docker save -o ~/workspace/docker_image.tar ${DOCKER_NAMESPACE}/${PROJECT_NAME}
+
+      - run:
+          name: Copy goss configuration files into the workspace
+          # eval is needed for the CIRCLE_WORKING_DIRECTORY variable as it contains a non-expanded '~'
+          command: eval cp ${CIRCLE_WORKING_DIRECTORY}/.circleci/{goss.yaml,goss_wait.yaml} $GOSS_FILES_PATH
 
       - persist_to_workspace:
           root: ~/workspace
           paths:
             - docker_image.tar
+            - goss*.yaml
+
+  test_docker_image:
+    machine: true
+    steps:
+      - run: *env_vars
+
+      - attach_workspace:
+          at: ~/workspace
+
+      - run: *load_docker_image
+
+      - run:
+          name: Install goss and dgoss wrapper
+          command: |
+            mkdir -p ~/bin
+            curl -fsSL -o ~/bin/goss https://github.com/aelsabbahy/goss/releases/download/${GOSS_VERSION}/goss-linux-amd64
+            curl -fsSL -o ~/bin/dgoss https://raw.githubusercontent.com/aelsabbahy/goss/${GOSS_VERSION}/extras/dgoss/dgoss
+            chmod +rx ~/bin/goss ~/bin/dgoss
+
+      - run:
+          name: Run goss validation
+          command: |
+            dgoss run ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1}
+
+      - run:
+          name: Run goss validation again to extract the JUnit result
+          command: |
+            mkdir -p /tmp/goss-test-results/goss
+            GOSS_OPTS="--format junit" dgoss run ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} 2>&1 | sed -n '/^<[[:alpha:]/?]/p' > /tmp/goss-test-results/goss/results.xml
+
+      - store_test_results:
+          path: /tmp/goss-test-results
 
   publish_docker_image:
     machine: true
@@ -50,32 +88,26 @@ jobs:
       - attach_workspace:
           at: ~/workspace
 
-      - run: docker load -i ~/workspace/docker_image.tar
+      - run: *load_docker_image
 
       - run:
           name: Add Docker tag on the image
           command: |
             if [ -n "${CIRCLE_BRANCH}" -a -z "${CIRCLE_TAG}" ]; then
-              if [ "${CIRCLE_BRANCH}" = "master" ]; then
-                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:latest"
-              else
-                BRANCH=$(echo $CIRCLE_BRANCH | sed 's/[^[:alnum:]_.-]/_/g')
-                docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${BRANCH}"
-              fi
-
+              echo "The publish job is not planned to run on a branch commit" >&2
+              exit 1
             elif [ -n "${CIRCLE_TAG}" -a -z "${CIRCLE_BRANCH}" ]; then
               TAG=$(echo $CIRCLE_TAG | sed 's/[^[:alnum:]_.-]/_/g')
               docker_tag="${DOCKER_NAMESPACE}/${PROJECT_NAME}:${TAG}"
-
+              echo "Adding the following tags on the Docker image : ${docker_tag} & latest"
+              docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} ${docker_tag}
+              docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} latest
             else
               echo "Unexpected condition state :" >&2
               echo "The build should be either commit-triggered or tag-triggered" >&2
               echo "So CircleCI should provide either the BRANCH or the TAG environment variable" >&2
               exit 1
             fi
-
-            echo "Adding the following tag on the Docker image : ${docker_tag}"
-            docker tag ${DOCKER_NAMESPACE}/${PROJECT_NAME}:${CIRCLE_SHA1} ${docker_tag}
 
       - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 
@@ -92,9 +124,9 @@ workflows:
                 - master
                 - /^pull\/.*$/
             tags:
-              only: /.*/
+              only: /v.*/
 
-      - publish_docker_image:
+      - test_docker_image:
           requires:
             - build_docker_image
           filters:
@@ -102,5 +134,15 @@ workflows:
               only:
                 - develop
                 - master
+                - /^pull\/.*$/
             tags:
               only: /.*/
+
+      - publish_docker_image:
+          requires:
+            - test_docker_image
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v.*/
