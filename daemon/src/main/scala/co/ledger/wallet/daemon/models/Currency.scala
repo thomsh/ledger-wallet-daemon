@@ -7,60 +7,45 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 import scala.collection.JavaConverters._
 
-class Currency(coreC: core.Currency) {
 
-  val name: String = coreC.getName
+object Currency {
+  implicit class CoreCurrencyWrapper(val c: core.Currency) extends AnyVal {
+    def concatSig(sig: Array[Byte]): Array[Byte] = Currency.concatSig(c)(sig)
+    def parseUnsignedBTCTransaction(rawTx: Array[Byte]): Either[String, core.BitcoinLikeTransaction] = Currency.parseUnsignedBTCTransaction(c)(rawTx)
+    def validateAddress(address: String): Boolean = Currency.validateAddress(c)(address)
+    def convertAmount(amount: Long): core.Amount = Currency.convertAmount(c)(amount)
+    def currencyView: CurrencyView = Currency.currencyView(c)
+  }
 
-  val family: core.WalletType = coreC.getWalletType
-
-  lazy val currencyView: CurrencyView = CurrencyView(
-    coreC.getName,
-    family,
-    coreC.getBip44CoinType,
-    coreC.getPaymentUriScheme,
-    coreC.getUnits.asScala.map(newUnitView),
-    newNetworkParamsView(coreC, family)
-  )
-
-  def concateSig(sig: Array[Byte]): Array[Byte] = family match {
-    case core.WalletType.BITCOIN => sig ++ coreC.getBitcoinLikeNetworkParameters.getSigHash
+  def concatSig(currency: core.Currency)(sig: Array[Byte]): Array[Byte] = currency.getWalletType match {
+    case core.WalletType.BITCOIN => sig ++ currency.getBitcoinLikeNetworkParameters.getSigHash
     case _ => sig
   }
 
-  def parseUnsignedTransaction(rawTx: Array[Byte]): core.BitcoinLikeTransaction = family match {
-    case core.WalletType.BITCOIN => core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(coreC, rawTx)
-    case _ => throw new UnsupportedOperationException(s"No parser found for currency family '$family'")
-  }
+  def parseUnsignedBTCTransaction(currency: core.Currency)(rawTx: Array[Byte]): Either[String, core.BitcoinLikeTransaction] =
+    currency.getWalletType match {
+      case core.WalletType.BITCOIN => Right(core.BitcoinLikeTransactionBuilder.parseRawUnsignedTransaction(currency, rawTx))
+      case w => Left(s"$w is not BITCOIN type")
+    }
 
-  def validateAddress(address: String): Boolean = core.Address.isValid(address, coreC)
+  def validateAddress(c: core.Currency)(address: String): Boolean = core.Address.isValid(address, c)
 
-  def convertAmount(amount: Long): core.Amount = core.Amount.fromLong(coreC, amount)
+  def convertAmount(c: core.Currency)(amount: Long): core.Amount = core.Amount.fromLong(c, amount)
+
+  def currencyView(c: core.Currency): CurrencyView = CurrencyView(
+    c.getName,
+    c.getWalletType,
+    c.getBip44CoinType,
+    c.getPaymentUriScheme,
+    c.getUnits.asScala.map(newUnitView),
+    newNetworkParamsView(c, c.getWalletType)
+  )
 
   private def newUnitView(coreUnit: core.CurrencyUnit): UnitView =
     UnitView(coreUnit.getName, coreUnit.getSymbol, coreUnit.getCode, coreUnit.getNumberOfDecimal)
 
   private def newNetworkParamsView(coreCurrency: core.Currency, currencyFamily: core.WalletType): NetworkParamsView = currencyFamily match {
     case core.WalletType.BITCOIN => Bitcoin.newNetworkParamsView(coreCurrency.getBitcoinLikeNetworkParameters)
-    case _ => throw new UnsupportedOperationException
-  }
-
-  override def equals(that: Any): Boolean = {
-    that match {
-      case that: Currency => that.isInstanceOf[Currency] && this.hashCode == that.hashCode
-      case _ => false
-    }
-  }
-
-  override def hashCode: Int = {
-    this.name.hashCode + this.family.hashCode()
-  }
-
-  override def toString: String = s"Currency(name: $name, family: $family)"
-}
-
-object Currency {
-  def newInstance(coreC: core.Currency): Currency = {
-    new Currency(coreC)
   }
 }
 

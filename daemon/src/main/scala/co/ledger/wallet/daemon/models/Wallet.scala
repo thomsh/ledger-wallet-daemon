@@ -7,7 +7,7 @@ import co.ledger.core.implicits
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
-import co.ledger.wallet.daemon.exceptions.InvalidArgumentException
+import co.ledger.wallet.daemon.exceptions.CoreBadRequestException
 import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 import co.ledger.wallet.daemon.services.LogMsgMaker
@@ -19,6 +19,7 @@ import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
+import Currency._
 
 class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Logging {
   private[this] val self = this
@@ -29,7 +30,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   private[this] val currentBlockHeight: AtomicLong = new AtomicLong(-1)
 
   val name: String = coreW.getName
-  val currency: Currency = Currency.newInstance(coreW.getCurrency)
+  val currency: core.Currency = coreW.getCurrency
 
   def lastBlockHeight: Future[Long] = {
       coreW.getLastBlock()
@@ -106,10 +107,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
   def addAccountIfNotExit(accountDerivations: AccountDerivationView): Future[Account] = {
     val accountCreationInfo = new core.AccountCreationInfo(
       accountDerivations.accountIndex,
-      (for (derivationResult <- accountDerivations.derivations) yield derivationResult.owner).asArrayList,
-      (for (derivationResult <- accountDerivations.derivations) yield derivationResult.path).asArrayList,
-      (for (derivationResult <- accountDerivations.derivations) yield HexUtils.valueOf(derivationResult.pubKey.get)).asArrayList,
-      (for (derivationResult <- accountDerivations.derivations) yield HexUtils.valueOf(derivationResult.chainCode.get)).asArrayList
+      accountDerivations.derivations.map(_.owner).asArrayList,
+      accountDerivations.derivations.map(_.path).asArrayList,
+      accountDerivations.derivations.map(d => HexUtils.valueOf(d.pubKey.get)).asArrayList,
+      accountDerivations.derivations.map(d => HexUtils.valueOf(d.chainCode.get)).asArrayList
     )
     accountCreationInfo.getOwners.asScala.foreach(o => println(s"Owner: $o"))
     accountCreationEpilogue(coreW.newAccountWithInfo(accountCreationInfo), accountDerivations.accountIndex)
@@ -121,7 +122,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
       Account.newInstance(startListen(coreA), self)
     }.recoverWith {
       case e: implicits.InvalidArgumentException =>
-        Future.failed(InvalidArgumentException(e.getMessage))
+        Future.failed(CoreBadRequestException(e.getMessage, e))
       case _: implicits.AccountAlreadyExistsException =>
         for {
           _ <- Future(warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", name).toString()))
@@ -159,7 +160,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     self.name.hashCode + self.currency.hashCode()
   }
 
-  override def toString: String = s"Wallet(name: $name, currency: ${currency.name})"
+  override def toString: String = s"Wallet(name: $name, currency: ${currency.getName})"
 
   private def startListen(): Future[Unit] = {
     coreW.getAccountCount().flatMap { count =>

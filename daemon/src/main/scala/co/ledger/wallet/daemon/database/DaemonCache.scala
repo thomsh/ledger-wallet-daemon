@@ -7,6 +7,7 @@ import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDeri
 import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
+import co.ledger.core.Currency
 
 import scala.concurrent.Future
 

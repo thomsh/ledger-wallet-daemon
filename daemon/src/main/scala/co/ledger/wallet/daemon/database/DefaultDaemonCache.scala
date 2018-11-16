@@ -5,8 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
-import co.ledger.wallet.daemon.exceptions
-import co.ledger.wallet.daemon.exceptions.{AccountNotFoundException, UserNotFoundException, WalletPoolAlreadyExistException, WalletPoolNotFoundException}
+import co.ledger.wallet.daemon.exceptions._
 import co.ledger.wallet.daemon.models.Account.{Account, Derivation}
 import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
@@ -15,6 +14,7 @@ import co.ledger.wallet.daemon.services.LogMsgMaker
 import com.twitter.inject.Logging
 import javax.inject.Singleton
 import slick.jdbc.JdbcBackend.Database
+import co.ledger.core.Currency
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -39,14 +39,14 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   override def syncOperations(pubKey: String, poolName: String): Future[Seq[SynchronizationResult]] = {
     getWalletPool(pubKey, poolName).flatMap({
       case Some(pool) => pool.sync()
-      case None => throw WalletPoolNotFoundException(poolName)
+      case None => Future.failed(WalletPoolNotFoundException(poolName))
     })
   }
 
   override def syncOperations(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Seq[SynchronizationResult]] = {
     getAccount(accountIndex, pubKey, poolName, walletName).flatMap({
       case Some(account) => account.sync(poolName).map(Seq(_))
-      case None => throw AccountNotFoundException(accountIndex)
+      case None => Future.failed(AccountNotFoundException(accountIndex))
     })
   }
 
@@ -121,11 +121,17 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   private def getHardWallet(pubKey: String, poolName: String, walletName: String): Future[Wallet] = {
-    getWallet(walletName, poolName, pubKey).map { wO => wO.getOrElse(throw exceptions.WalletNotFoundException(walletName)) }
+    getWallet(walletName, poolName, pubKey).flatMap {
+      case Some(w) => Future(w)
+      case None => Future.failed(WalletNotFoundException(walletName))
+    }
   }
 
   private def getHardPool(pubKey: String, poolName: String): Future[Pool] = {
-    getWalletPool(pubKey, poolName).map { pO => pO.getOrElse(throw WalletPoolNotFoundException(poolName)) }
+    getWalletPool(pubKey, poolName).flatMap {
+      case Some(p) => Future(p)
+      case None => Future.failed(WalletPoolNotFoundException(poolName))
+    }
   }
 
   def getUser(pubKey: String): Future[Option[User]] = {
@@ -136,7 +142,10 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   private def getHardUser(pubKey: String): Future[User] = {
-    getUser(pubKey).map { uO => uO.getOrElse(throw UserNotFoundException(pubKey)) }
+    getUser(pubKey).flatMap {
+      case Some(u) => Future(u)
+      case None => Future.failed(UserNotFoundException(pubKey))
+    }
   }
 
   def getUsers: Future[Seq[User]] = {
@@ -206,11 +215,11 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   def getHardAccount(user: User, poolName: String, walletName: String, accountIndex: Int): Future[(Pool, Wallet, Account)] = {
     for {
       poolOpt <- user.pool(poolName)
-      pool <- poolOpt.fold[Future[Pool]](Future.failed(exceptions.WalletPoolNotFoundException(poolName)))(Future.successful)
+      pool <- poolOpt.fold[Future[Pool]](Future.failed(WalletPoolNotFoundException(poolName)))(Future.successful)
       walletOpt <- pool.wallet(walletName)
-      wallet <- walletOpt.fold[Future[Wallet]](Future.failed(exceptions.WalletNotFoundException(walletName)))(Future.successful)
+      wallet <- walletOpt.fold[Future[Wallet]](Future.failed(WalletNotFoundException(walletName)))(Future.successful)
       accountOpt <- wallet.account(accountIndex)
-      account <- accountOpt.fold[Future[Account]](Future.failed(exceptions.AccountNotFoundException(accountIndex)))(Future.successful)
+      account <- accountOpt.fold[Future[Account]](Future.failed(AccountNotFoundException(accountIndex)))(Future.successful)
     } yield (pool, wallet, account)
   }
 

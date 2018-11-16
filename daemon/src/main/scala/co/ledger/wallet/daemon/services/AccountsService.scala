@@ -60,17 +60,18 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
                          poolName: String,
                          walletName: String,
                          queryParams: OperationQueryParams): Future[PackedOperationsView] = {
-    if(queryParams.next.isEmpty && queryParams.previous.isEmpty) {
-      // new request
-      info(LogMsgMaker.newInstance("Retrieve latest operations").toString())
-      defaultDaemonCache.getAccountOperations(user, accountIndex, poolName, walletName, queryParams.batch, queryParams.fullOp)
-    } else if (queryParams.next.isDefined) {
-      // next has more priority, using database batch instead queryParams.batch
-      info(LogMsgMaker.newInstance("Retrieve next batch operation").toString())
-      defaultDaemonCache.getNextBatchAccountOperations(user, accountIndex, poolName, walletName, queryParams.next.get, queryParams.fullOp)
-    } else {
-      info(LogMsgMaker.newInstance("Retrieve previous operations").toString())
-      defaultDaemonCache.getPreviousBatchAccountOperations(user, accountIndex, poolName, walletName, queryParams.previous.get, queryParams.fullOp)
+    (queryParams.next, queryParams.previous) match {
+      case (Some(n), _) =>
+        // next has more priority, using database batch instead queryParams.batch
+        info(LogMsgMaker.newInstance("Retrieve next batch operation").toString())
+        defaultDaemonCache.getNextBatchAccountOperations(user, accountIndex, poolName, walletName, n, queryParams.fullOp)
+      case (_, Some(p)) =>
+        info(LogMsgMaker.newInstance("Retrieve previous operations").toString())
+        defaultDaemonCache.getPreviousBatchAccountOperations(user, accountIndex, poolName, walletName, p, queryParams.fullOp)
+      case _ =>
+        // new request
+        info(LogMsgMaker.newInstance("Retrieve latest operations").toString())
+        defaultDaemonCache.getAccountOperations(user, accountIndex, poolName, walletName, queryParams.batch, queryParams.fullOp)
     }
   }
 

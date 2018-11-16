@@ -74,7 +74,6 @@ object ApiClient {
       case FeeMethod.FAST => fast / 1000
       case FeeMethod.NORMAL => normal / 1000
       case FeeMethod.SLOW => slow / 1000
-      case _ => throw new UnsupportedOperationException(s"Fee method not supported '$feeMethod'")
     }
   }
 }

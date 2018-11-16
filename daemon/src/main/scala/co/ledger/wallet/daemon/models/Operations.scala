@@ -35,7 +35,7 @@ object Operations {
       curFamily = operation.getWalletType
     } yield OperationView(
       operation.getUid,
-      wallet.currency.name,
+      wallet.currency.getName,
       curFamily,
       Option(operation.getTrust).map(getTrustIndicatorView(_)),
       confirms,

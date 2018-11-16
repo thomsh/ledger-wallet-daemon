@@ -1,13 +1,8 @@
 package co.ledger.wallet.daemon.controllers
 
-import javax.inject.Inject
-
-import co.ledger.core.implicits.NotEnoughFundsException
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.controllers.requests.{CommonMethodValidations, RichRequest}
-import co.ledger.wallet.daemon.controllers.responses.ResponseSerializer
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
-import co.ledger.wallet.daemon.exceptions.{AccountNotFoundException, WalletNotFoundException}
 import co.ledger.wallet.daemon.models.FeeMethod
 import co.ledger.wallet.daemon.services.TransactionsService
 import co.ledger.wallet.daemon.utils.HexUtils
@@ -15,6 +10,7 @@ import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
 import com.twitter.finatra.request.RouteParam
 import com.twitter.finatra.validation.{MethodValidation, ValidationResult}
+import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
@@ -47,15 +43,7 @@ class TransactionsController @Inject()(transactionsService: TransactionsService)
     info(s"Create transaction $request")
     transactionsService.createTransaction(
       request.transactionInfo,
-      request.accountInfo).recover {
-      case _: WalletNotFoundException => responseSerializer.serializeBadRequest(
-        Map("response" -> "Wallet doesn't exist"), response)
-      case _: AccountNotFoundException => responseSerializer.serializeBadRequest(
-        Map("response" -> "Account doesn't exist"), response)
-      case _: NotEnoughFundsException => responseSerializer.serializeBadRequest(
-        Map("response" -> "Not enough funds"), response)
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
-    }
+      request.accountInfo)
   }
 
   /**
@@ -70,18 +58,9 @@ class TransactionsController @Inject()(transactionsService: TransactionsService)
   post("/pools/:pool_name/wallets/:wallet_name/accounts/:account_index/transactions/sign")
   { request: SignTransactionRequest =>
     info(s"Sign transaction $request")
-    transactionsService.signTransaction(request.rawTx, request.pairedSignatures, request.accountInfo).recover {
-      case _: WalletNotFoundException => responseSerializer.serializeBadRequest(
-        Map("response" -> "Wallet doesn't exist"), response)
-      case _: AccountNotFoundException => responseSerializer.serializeBadRequest(
-        Map("response" -> "Account doesn't exist"), response)
-      case e: IllegalArgumentException => responseSerializer.serializeBadRequest(
-        Map("response" -> e.getMessage), response)
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
-    }
+    transactionsService.signTransaction(request.rawTx, request.pairedSignatures, request.accountInfo)
   }
 
-  private val responseSerializer: ResponseSerializer = ResponseSerializer.newInstance()
 }
 
 object TransactionsController {
