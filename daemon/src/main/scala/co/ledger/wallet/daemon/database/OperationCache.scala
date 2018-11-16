@@ -76,8 +76,8 @@ class OperationCache extends Logging with GenCache {
           record.accountIndex,
           record.batch,
           new AtomicLong(record.batch + record.offset()),
-          Option(UUID.randomUUID()),
-          Option(current))
+          Some(UUID.randomUUID()),
+          Some(current))
         case None => throw OperationNotFoundException(current)
       }
       case None => throw OperationNotFoundException(id)

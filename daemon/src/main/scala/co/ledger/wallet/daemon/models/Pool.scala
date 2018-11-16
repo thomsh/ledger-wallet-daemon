@@ -81,10 +81,8 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     * @param currencyName the specified currency name.
     * @return a future of optional currency.
     */
-  def currency(currencyName: String): Future[Option[Currency]] =
-    coreP.getCurrency(currencyName).map { coreC =>
-      Some(Currency.newInstance(coreC))
-    }.recover {
+  def currency(currencyName: String): Future[Option[core.Currency]] =
+    coreP.getCurrency(currencyName).map(Option.apply).recover {
       case _: CoreCurrencyNotFoundException => None
     }
 
@@ -93,10 +91,8 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     *
     * @return future of currencies sequence.
     */
-  def currencies(): Future[Seq[Currency]] = {
-    coreP.getCurrencies().map { cs =>
-      cs.asScala.map { c => Currency.newInstance(c) }.toList
-    }
+  def currencies(): Future[Seq[core.Currency]] = {
+    coreP.getCurrencies().map(_.asScala.toList)
   }
 
   /**
@@ -124,8 +120,8 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
             .toString())
           coreP.getWallet(walletName).flatMap { coreW => startListen(Wallet.newInstance(coreW, self)) }
       }
-    }.recover {
-      case _: CoreCurrencyNotFoundException => throw CurrencyNotFoundException(currencyName)
+    }.recoverWith {
+      case _: CoreCurrencyNotFoundException => Future.failed(CurrencyNotFoundException(currencyName))
     }
   }
 

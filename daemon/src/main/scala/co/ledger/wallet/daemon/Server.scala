@@ -2,7 +2,7 @@ package co.ledger.wallet.daemon
 
 import co.ledger.wallet.daemon.controllers._
 import co.ledger.wallet.daemon.filters._
-import co.ledger.wallet.daemon.mappers.AuthenticationExceptionMapper
+import co.ledger.wallet.daemon.mappers._
 import co.ledger.wallet.daemon.modules.{DaemonCacheModule, DaemonJacksonModule}
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.finatra.http.HttpServer
@@ -35,7 +35,10 @@ class ServerImpl extends HttpServer {
       .add[AuthenticationFilter, WalletPoolsController]
       .add[AuthenticationFilter, WalletsController]
       .add[AuthenticationFilter, TransactionsController]
+      // IMPORTANT: pay attention to the order, the latter mapper override the former mapper
       .exceptionMapper[AuthenticationExceptionMapper]
+      .exceptionMapper[DaemonExceptionMapper]
+      .exceptionMapper[LibCoreExceptionMapper]
 
   override protected def warmup(): Unit = {
     super.warmup()

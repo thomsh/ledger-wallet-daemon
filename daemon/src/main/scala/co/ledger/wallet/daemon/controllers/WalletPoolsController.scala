@@ -18,17 +18,16 @@ import scala.concurrent.ExecutionContext
 
 class WalletPoolsController @Inject()(poolsService: PoolsService) extends Controller {
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
+
   import WalletPoolsController._
 
   /**
     * End point queries for wallet pools view.
     *
     */
-  get("/pools") {(request: Request) =>
+  get("/pools") { request: Request =>
     info(s"GET wallet pools $request, Parameters(user: ${request.user.get.id})")
-    poolsService.pools(request.user.get).recover {
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
-    }
+    poolsService.pools(request.user.get)
   }
 
   /**
@@ -36,14 +35,12 @@ class WalletPoolsController @Inject()(poolsService: PoolsService) extends Contro
     * name of a pool is unique per user.
     *
     */
-  get("/pools/:pool_name") {(request: PoolRouteRequest) =>
+  get("/pools/:pool_name") { request: PoolRouteRequest =>
     info(s"GET wallet pool $request")
     poolsService.pool(request.user, request.pool_name).map {
-      case Some(view) => responseSerializer.serializeOk(view, response)
-      case None => responseSerializer.serializeNotFound(
+      case Some(view) => ResponseSerializer.serializeOk(view, response)
+      case None => ResponseSerializer.serializeNotFound(
         Map("response" -> "Wallet pool doesn't exist", "pool_name" -> request.pool_name), response)
-    }.recover {
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
     }
   }
 
@@ -51,15 +48,13 @@ class WalletPoolsController @Inject()(poolsService: PoolsService) extends Contro
     * End point to trigger the synchronization process of existing wallet pools of user.
     *
     */
-  post("/pools/operations/synchronize") {(request: Request) =>
+  post("/pools/operations/synchronize") { request: Request =>
     info(s"SYNC wallet pools $request, Parameters(user: ${request.user.get.id})")
     val t0 = System.currentTimeMillis()
     poolsService.syncOperations().map { result =>
       val t1 = System.currentTimeMillis()
       info(s"Synchronization finished, elapsed time: ${t1 - t0} milliseconds")
       result
-    }.recover {
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
     }
   }
 
@@ -75,12 +70,10 @@ class WalletPoolsController @Inject()(poolsService: PoolsService) extends Contro
     * End point to create a new wallet pool.
     *
     */
-  post("/pools") { (request: CreationRequest) =>
+  post("/pools") { request: CreationRequest =>
     info(s"CREATE wallet pool $request")
     // TODO: Deserialize the configuration from the body of the request
-    poolsService.createPool(request.user, request.pool_name, PoolConfiguration()).recover {
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
-    }
+    poolsService.createPool(request.user, request.pool_name, PoolConfiguration())
   }
 
   /**
@@ -89,20 +82,18 @@ class WalletPoolsController @Inject()(poolsService: PoolsService) extends Contro
     * operation, user will not be able to access the underlying wallets or accounts.
     *
     */
-  delete("/pools/:pool_name") {(request: PoolRouteRequest) =>
+  delete("/pools/:pool_name") { request: PoolRouteRequest =>
     info(s"DELETE wallet pool $request")
-    poolsService.removePool(request.user, request.pool_name).recover {
-      case e: Throwable => responseSerializer.serializeInternalError(response, e)
-    }
+    poolsService.removePool(request.user, request.pool_name)
   }
 
-  private val responseSerializer: ResponseSerializer = ResponseSerializer.newInstance()
 }
 
 object WalletPoolsController {
+
   case class CreationRequest(
-                            @NotEmpty @JsonProperty pool_name: String,
-                            request: Request
+                              @NotEmpty @JsonProperty pool_name: String,
+                              request: Request
                             ) extends RichRequest(request) {
     @MethodValidation
     def validatePoolName: ValidationResult = CommonMethodValidations.validateName("pool_name", pool_name)

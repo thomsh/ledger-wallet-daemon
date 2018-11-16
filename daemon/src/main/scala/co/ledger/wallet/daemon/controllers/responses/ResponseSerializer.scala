@@ -4,7 +4,7 @@ import com.twitter.finagle.http.Response
 import com.twitter.finatra.http.response.ResponseBuilder
 import com.twitter.inject.Logging
 
-class ResponseSerializer extends Logging {
+object ResponseSerializer extends Logging {
 
   def serializeInternalError(response: ResponseBuilder, caught: Throwable): Response = {
     error(ErrorCode.Internal_Error, caught)
@@ -30,8 +30,3 @@ class ResponseSerializer extends Logging {
   }
 }
 
-object ResponseSerializer {
-  def newInstance(): ResponseSerializer = {
-    new ResponseSerializer()
-  }
-}
