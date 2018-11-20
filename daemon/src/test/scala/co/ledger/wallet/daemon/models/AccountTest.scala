@@ -2,6 +2,7 @@ package co.ledger.wallet.daemon.models
 
 import java.util.UUID
 
+import co.ledger.core.Address
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.database.PoolDto
 import co.ledger.wallet.daemon.models.Account.Account
@@ -61,7 +62,7 @@ class AccountTest extends AssertionsForJUnit {
       )
     }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
 
-  private val freshAddresses: Seq[String] = Await.result(account2.freshAddresses(), Duration.Inf)
+  private val freshAddresses: Seq[Address] = Await.result(account2.freshAddresses(), Duration.Inf)
 
   @Test def verifyAccountCreation(): Unit = {
     assert(0 === account0.index)

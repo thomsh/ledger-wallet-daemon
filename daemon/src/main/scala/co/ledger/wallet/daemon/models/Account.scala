@@ -153,8 +153,8 @@ object Account {
       case core.TimePeriod.WEEK => Calendar.WEEK_OF_MONTH
     }
 
-    def freshAddresses(): Future[Seq[String]] = {
-      coreA.getFreshPublicAddresses().map(_.asScala.map(_.toString))
+    def freshAddresses(): Future[Seq[core.Address]] = {
+      coreA.getFreshPublicAddresses().map(_.asScala.toList)
     }
 
     def sync(poolName: String): Future[SynchronizationResult] = {
@@ -268,3 +268,8 @@ case class AccountExtendedDerivationView(
                                           @JsonProperty("account_index") accountIndex: Int,
                                           @JsonProperty("derivations") derivations: Seq[ExtendedDerivationView]
                                         )
+
+case class FreshAddressView(
+                           @JsonProperty("address") address: String,
+                           @JsonProperty("derivation_path") derivation: String
+                           )

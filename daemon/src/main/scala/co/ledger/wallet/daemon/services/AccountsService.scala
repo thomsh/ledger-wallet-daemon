@@ -37,7 +37,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
     defaultDaemonCache.getAccount(accountIndex, user.pubKey, poolName, walletName)
   }
 
-  def accountFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[String]] = {
+  def accountFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[FreshAddressView]] = {
     defaultDaemonCache.getFreshAddresses(accountIndex, user.pubKey, poolName, walletName)
   }
 

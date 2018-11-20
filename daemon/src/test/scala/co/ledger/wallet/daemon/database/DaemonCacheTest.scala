@@ -5,7 +5,7 @@ import java.util.UUID
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext.Implicits.global
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.exceptions._
-import co.ledger.wallet.daemon.models.{AccountDerivationView, DerivationView}
+import co.ledger.wallet.daemon.models.{AccountDerivationView, DerivationView, FreshAddressView}
 import djinni.NativeLibLoader
 import org.junit.Assert._
 import org.junit.{BeforeClass, Test}
@@ -66,7 +66,7 @@ class DaemonCacheTest extends AssertionsForJUnit {
   }
 
   @Test def verifyGetFreshAddressesFromNonExistingAccount(): Unit = {
-    val addresses: Seq[String] = Await.result(cache.getFreshAddresses(accountIndex = 0, PUB_KEY_3, POOL_NAME, WALLET_NAME), Duration.Inf)
+    val addresses: Seq[FreshAddressView] = Await.result(cache.getFreshAddresses(accountIndex = 0, PUB_KEY_3, POOL_NAME, WALLET_NAME), Duration.Inf)
     assert(!addresses.isEmpty)
     try {
       Await.result(cache.getFreshAddresses(accountIndex = 1, PUB_KEY_3, POOL_NAME, WALLET_NAME), Duration.Inf)

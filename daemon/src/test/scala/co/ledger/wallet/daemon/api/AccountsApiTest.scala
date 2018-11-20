@@ -3,7 +3,7 @@ package co.ledger.wallet.daemon.api
 import java.util.UUID
 
 import co.ledger.core.TimePeriod
-import co.ledger.wallet.daemon.models.{AccountDerivationView, AccountView}
+import co.ledger.wallet.daemon.models.{AccountDerivationView, AccountView, FreshAddressView}
 import co.ledger.wallet.daemon.services.OperationQueryParams
 import co.ledger.wallet.daemon.utils.APIFeatureTest
 import com.twitter.finagle.http.{Response, Status}
@@ -60,7 +60,7 @@ class AccountsApiTest extends APIFeatureTest {
     createPool("fresh_addresses_pool")
     assertWalletCreation("fresh_addresses_pool", "account_wallet", "bitcoin", Status.Ok)
     assertCreateAccount(CORRECT_BODY, "fresh_addresses_pool", "account_wallet", Status.Ok)
-    val addresses = parse[Seq[String]](assertGetFreshAddresses("fresh_addresses_pool", "account_wallet", index = 0, Status.Ok))
+    val addresses = parse[Seq[FreshAddressView]](assertGetFreshAddresses("fresh_addresses_pool", "account_wallet", index = 0, Status.Ok))
     assert(!addresses.isEmpty)
   }
 

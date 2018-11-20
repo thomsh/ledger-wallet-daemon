@@ -57,8 +57,12 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     getHardWallet(pubKey, poolName, walletName).flatMap { wallet => wallet.accounts() }
   }
 
-  def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[String]] = {
-    getHardAccount(pubKey, poolName, walletName, accountIndex).flatMap { account => account.freshAddresses() }
+  def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[FreshAddressView]] = {
+    getHardAccount(pubKey, poolName, walletName, accountIndex).flatMap { account =>
+      account.freshAddresses().map(adds =>
+        adds.map(add =>
+          FreshAddressView(add.toString, add.getDerivationPath)))
+    }
   }
 
   def getDerivationPath(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[String] = {
