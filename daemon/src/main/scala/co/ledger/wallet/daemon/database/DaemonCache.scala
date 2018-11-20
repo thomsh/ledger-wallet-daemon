@@ -77,7 +77,7 @@ trait DaemonCache {
     * @param walletName the name of wallet the account belongs to.
     * @return a Future of a sequence of instances of `co.ledger.wallet.daemon.models.Account`.
     */
-  def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[String]]
+  def getFreshAddresses(accountIndex: Int, pubKey: String, poolName: String, walletName: String): Future[Seq[FreshAddressView]]
 
   /**
     * Getter of account operations batch instances with specified parameters.
