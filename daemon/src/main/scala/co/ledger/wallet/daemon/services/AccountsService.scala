@@ -75,6 +75,17 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
     }
   }
 
+  def firstOperation(user: User, accountIndex: Int, poolName: String, walletName: String): Future[Option[OperationView]] = {
+    for {
+      (_, wallet, account) <- defaultDaemonCache.getHardAccount(user, poolName, walletName, accountIndex)
+      optView <- account.firstOperation flatMap {
+        case None => Future(None)
+        case Some(o) => Operations.getView(o, wallet, account).map(Some(_))
+      }
+    } yield optView
+
+  }
+
   def accountOperation(user: User, uid: String, accountIndex: Int, poolName: String, walletName: String, fullOp: Int): Future[Option[OperationView]] = {
     defaultDaemonCache.getAccountOperation(user, uid, accountIndex, poolName, walletName, fullOp)
   }

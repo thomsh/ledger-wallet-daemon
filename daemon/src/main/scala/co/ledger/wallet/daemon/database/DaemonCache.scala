@@ -109,6 +109,8 @@ trait DaemonCache {
     */
   def getAccountOperation(user: User, uid: String, accountIndex: Int, poolName: String, walletName: String, fullOp: Int): Future[Option[OperationView]]
 
+  def getHardAccount(user: User, poolName: String, walletName: String, accountIndex: Int): Future[(Pool, Wallet, Account)]
+
   /**
     * Getter of account operations batch instances with specified parameters.
     *
