@@ -3,7 +3,7 @@ package co.ledger.wallet.daemon.models
 import java.util.{Calendar, Date}
 
 import co.ledger.core
-import co.ledger.core.implicits._
+import co.ledger.core.implicits.{UnsupportedOperationException, _}
 import co.ledger.core.{BitcoinLikePickingStrategy, OperationOrderKey}
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.clients.ClientFactory
@@ -50,22 +50,24 @@ object Account {
 
     // TODO: This part only works for BTC, need a way to scale it to all coins
     def signTransaction(rawTx: Array[Byte], signatures: Seq[(Array[Byte], Array[Byte])]): Future[String] = {
-      // TODO avoid brute force Either resolve
-      wallet.currency.parseUnsignedBTCTransaction(rawTx) match {
-        case Right(tx) =>
-          if (tx.getInputs.size != signatures.size) Future.failed(new SignatureSizeUnmatchException(tx.getInputs.size(), signatures.size))
-          else {
-            tx.getInputs.asScala.zipWithIndex.foreach { case (input, index) =>
-              input.pushToScriptSig(wallet.currency.concatSig(signatures(index)._1)) // signature
-              input.pushToScriptSig(signatures(index)._2) // pubkey
-            }
-            debug(s"transaction after sign '${HexUtils.valueOf(tx.serialize())}'")
-            coreA.asBitcoinLikeAccount().broadcastTransaction(tx)
-          }
-        case Left(_) =>
-          Future.failed(new UnsupportedOperationException("Account type not supported, can't sign transaction"))
-      }
 
+      for {
+        currentHeight <- wallet.lastBlockHeight
+        // TODO avoid brute force Either resolve
+        txId <- wallet.currency.parseUnsignedBTCTransaction(rawTx, currentHeight) match {
+          case Right(tx) =>
+            if (tx.getInputs.size != signatures.size) Future.failed(new SignatureSizeUnmatchException(tx.getInputs.size(), signatures.size))
+            else {
+              tx.getInputs.asScala.zipWithIndex.foreach { case (input, index) =>
+                input.pushToScriptSig(wallet.currency.concatSig(signatures(index)._1)) // signature
+                input.pushToScriptSig(signatures(index)._2) // pubkey
+              }
+              debug(s"transaction after sign '${HexUtils.valueOf(tx.serialize())}'")
+              coreA.asBitcoinLikeAccount().broadcastTransaction(tx)
+            }
+          case Left(_) => Future.failed(new UnsupportedOperationException("Account type not supported, can't sign transaction"))
+        }
+      } yield txId
     }
 
     def createTransaction(transactionInfo: TransactionInfo): Future[TransactionView] = {
@@ -109,6 +111,11 @@ object Account {
       } else {
         coreA.queryOperations().addOrder(OperationOrderKey.DATE, true).offset(offset).limit(batch).partial().execute()
       }).map { operations => operations.asScala.toList }
+    }
+
+    def firstOperation: Future[Option[core.Operation]] = {
+      coreA.queryOperations().addOrder(OperationOrderKey.DATE, false).limit(1).partial().execute()
+        .map { ops => ops.asScala.toList.headOption }
     }
 
     def operationCounts: Future[Map[core.OperationType, Int]] =
