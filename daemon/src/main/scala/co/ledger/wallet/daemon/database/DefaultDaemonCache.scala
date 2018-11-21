@@ -15,6 +15,9 @@ import com.twitter.inject.Logging
 import javax.inject.Singleton
 import slick.jdbc.JdbcBackend.Database
 import co.ledger.core.{Currency, Account}
+import co.ledger.wallet.daemon.utils.Utils._
+import co.ledger.core.Wallet
+import co.ledger.wallet.daemon.models.Wallet._
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -55,7 +58,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   def getAccounts(pubKey: String, poolName: String, walletName: String): Future[Seq[Account]] = {
-    getHardWallet(pubKey, poolName, walletName).flatMap { wallet => wallet.accounts() }
+    getHardWallet(pubKey, poolName, walletName).flatMap { wallet => wallet.accounts }
   }
 
   def getFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[FreshAddressView]] = {
@@ -70,7 +73,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   def createAccount(accountDerivations: AccountDerivationView, user: User, poolName: String, walletName: String): Future[Account] = {
-    getHardWallet(user.pubKey, poolName, walletName).flatMap { w => w.addAccountIfNotExit(accountDerivations) }
+    getHardWallet(user.pubKey, poolName, walletName).flatMap { w => w.addAccountIfNotExist(accountDerivations) }
   }
 
   override def createAccount(accountDerivation: AccountExtendedDerivationView, user: User, poolName: String, walletName: String): Future[Account] = {
@@ -78,44 +81,44 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   }
 
   def getCurrency(currencyName: String, poolName: String, pubKey: String): Future[Option[Currency]] = {
-    getHardPool(pubKey, poolName).flatMap { pool => pool.currency(currencyName) }
+    unsafeGetPool(pubKey, poolName).flatMap { pool => pool.currency(currencyName) }
   }
 
   def getCurrencies(poolName: String, pubKey: String): Future[Seq[Currency]] = {
-    getHardPool(pubKey, poolName).flatMap { pool => pool.currencies() }
+    unsafeGetPool(pubKey, poolName).flatMap { pool => pool.currencies() }
   }
 
 
   def getWallet(walletName: String, poolName: String, pubKey: String): Future[Option[Wallet]] = {
-    getHardPool(pubKey, poolName).flatMap { pool => pool.wallet(walletName) }
+    unsafeGetPool(pubKey, poolName).flatMap { pool => pool.wallet(walletName) }
   }
 
 
   def createWallet(walletName: String, currencyName: String, poolName: String, user: User): Future[Wallet] = {
-    getHardPool(user.pubKey, poolName).flatMap(_.addWalletIfNotExit(walletName, currencyName))
+    unsafeGetPool(user.pubKey, poolName).flatMap(_.addWalletIfNotExist(walletName, currencyName))
   }
 
   def getWalletPool(pubKey: String, poolName: String): Future[Option[Pool]] = {
-    getHardUser(pubKey).flatMap { user => user.pool(poolName)}
+    unsafeGetUser(pubKey).flatMap { user => user.pool(poolName)}
   }
 
   def getWalletPools(pubKey: String): Future[Seq[Pool]] = {
-    getHardUser(pubKey).flatMap { user => user.pools() }
+    unsafeGetUser(pubKey).flatMap { user => user.pools() }
   }
 
   def getWallets(offset: Int, batch: Int, poolName: String, pubKey: String): Future[(Int, Seq[Wallet])] = {
-    getHardPool(pubKey, poolName).flatMap { pool => pool.wallets(offset, batch) }
+    unsafeGetPool(pubKey, poolName).flatMap { pool => pool.wallets(offset, batch) }
   }
 
   def createWalletPool(user: User, poolName: String, configuration: String): Future[Pool] = {
-    getHardUser(user.pubKey).flatMap { user =>
+    unsafeGetUser(user.pubKey).flatMap { user =>
       user.addPoolIfNotExit(poolName, configuration)
     }
   }
 
   def deleteWalletPool(user: User, poolName: String): Future[Unit] = {
     // p.release() TODO once WalletPool#release exists
-    getHardUser(user.pubKey).flatMap { user =>
+    unsafeGetUser(user.pubKey).flatMap { user =>
       user.deletePool(poolName)
     }
   }
@@ -127,7 +130,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     }
   }
 
-  private def getHardPool(pubKey: String, poolName: String): Future[Pool] = {
+  private def unsafeGetPool(pubKey: String, poolName: String): Future[Pool] = {
     getWalletPool(pubKey, poolName).flatMap {
       case Some(p) => Future(p)
       case None => Future.failed(WalletPoolNotFoundException(poolName))
@@ -141,7 +144,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
     }.map { _ => users.get(pubKey) }}
   }
 
-  private def getHardUser(pubKey: String): Future[User] = {
+  private def unsafeGetUser(pubKey: String): Future[User] = {
     getUser(pubKey).flatMap {
       case Some(u) => Future(u)
       case None => Future.failed(UserNotFoundException(pubKey))
@@ -215,9 +218,9 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   def getHardAccount(user: User, poolName: String, walletName: String, accountIndex: Int): Future[(Pool, Wallet, Account)] = {
     for {
       poolOpt <- user.pool(poolName)
-      pool <- poolOpt.fold[Future[Pool]](Future.failed(WalletPoolNotFoundException(poolName)))(Future.successful)
+      pool <- poolOpt.toFuture(WalletPoolNotFoundException(poolName))
       walletOpt <- pool.wallet(walletName)
-      wallet <- walletOpt.fold[Future[Wallet]](Future.failed(WalletNotFoundException(walletName)))(Future.successful)
+      wallet <- walletOpt.toFuture(WalletNotFoundException(walletName))
       accountOpt <- wallet.account(accountIndex)
       account <- accountOpt.fold[Future[Account]](Future.failed(AccountNotFoundException(accountIndex)))(Future.successful)
     } yield (pool, wallet, account)

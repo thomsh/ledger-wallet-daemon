@@ -6,6 +6,7 @@ import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.database._
 import co.ledger.wallet.daemon.models.{WalletView, WalletsViewWithCount}
+import co.ledger.wallet.daemon.models.Wallet._
 
 import scala.concurrent.{ExecutionContext, Future}
 

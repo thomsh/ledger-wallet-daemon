@@ -1,16 +1,14 @@
 package co.ledger.wallet.daemon.models
 
-import java.util.concurrent.atomic.AtomicLong
-
 import co.ledger.core
-import co.ledger.core.implicits
 import co.ledger.core.implicits._
-import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.exceptions.CoreBadRequestException
-import co.ledger.wallet.daemon.models.Account.{Derivation, ExtendedDerivation}
+import co.ledger.wallet.daemon.models.Account.{Derivation, ExtendedDerivation, _}
+import co.ledger.wallet.daemon.models.Currency._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 import co.ledger.wallet.daemon.services.LogMsgMaker
+import co.ledger.wallet.daemon.utils.HexUtils
 import co.ledger.wallet.daemon.utils.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.twitter.inject.Logging
@@ -19,92 +17,95 @@ import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
-import Currency._
-import Account._
-import co.ledger.wallet.daemon.utils.HexUtils
 
-class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Logging {
-  private[this] val self = this
+object Wallet extends Logging {
+  implicit class RichCoreWallet(val w: core.Wallet) extends AnyVal {
 
-  implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
-  private val configuration: Map[String, Any] = Map[String, Any]()
-  private[this] val currentBlockHeight: AtomicLong = new AtomicLong(-1)
+    def lastBlockHeight(implicit ec: ExecutionContext): Future[Long] = Wallet.lastBlockHeight(w)
 
-  val name: String = coreW.getName
-  val currency: core.Currency = coreW.getCurrency
+    def walletView(implicit ec: ExecutionContext): Future[WalletView] = Wallet.walletView(w)
 
-  def lastBlockHeight: Future[Long] = {
-      coreW.getLastBlock()
-        .map { lastBlock =>
-          updateBlockHeight(lastBlock.getHeight)
-          currentBlockHeight.get()
-        } recover {
-        case _: BlockNotFoundException =>
-          updateBlockHeight(0)
-          currentBlockHeight.get()
-      }
+    def accountDerivationPathInfo(index: Int)(implicit ec: ExecutionContext): Future[String] = Wallet.accountDerivationPathInfo(index, w)
+
+    def account(index: Int)(implicit ec: ExecutionContext): Future[Option[core.Account]] = Wallet.account(index, w)
+
+    def accountCreationInfo(index: Option[Int])(implicit ec: ExecutionContext): Future[Derivation] = Wallet.accountCreationInfo(index, w)
+
+    def accountExtendedCreation(index: Option[Int])(implicit ec: ExecutionContext): Future[ExtendedDerivation] = Wallet.accountExtendedCreation(index, w)
+
+    def accounts(implicit ec: ExecutionContext): Future[Seq[core.Account]] = Wallet.accounts(w)
+
+    def addAccountIfNotExist(derivations: AccountExtendedDerivationView)(implicit ec: ExecutionContext): Future[core.Account] = Wallet.addAccountIfNotExist(derivations, w)
+
+    def addAccountIfNotExist(accountDerivations: AccountDerivationView)(implicit ec: ExecutionContext): Future[core.Account] = Wallet.addAccountIfNotExist(accountDerivations, w)
+
+    def syncAccounts(poolName: String)(implicit ec: ExecutionContext): Future[Seq[SynchronizationResult]] = Wallet.syncAccounts(poolName, w)
+
+    def startCacheAndRealTimeObserver(implicit ec: ExecutionContext): Future[Unit] = Wallet.startCacheAndRealTimeObserver(w)
+
+    def stopRealTimeObserver(implicit ec: ExecutionContext): Future[Unit] = Wallet.stopRealTimeObserver(w)
+  }
+
+  def lastBlockHeight(w: core.Wallet)(implicit ec: ExecutionContext): Future[Long] = {
+    w.getLastBlock()
+      .map(_.getHeight) recover {
+      case _: co.ledger.core.implicits.BlockNotFoundException => 0
     }
-
-  def updateBlockHeight(newHeight: Long): Unit = {
-    val updated = currentBlockHeight.updateAndGet(n => Math.max(n, newHeight))
-    debug(LogMsgMaker.newInstance("Update block height").append("to", updated).append("at", newHeight).append("wallet", name).toString())
   }
 
-  def walletView: Future[WalletView] = {
+  def walletView(w: core.Wallet)(implicit ec: ExecutionContext): Future[WalletView] = {
     for {
-      balance <- getBalance
-      ac <- coreW.getAccountCount()
-    } yield WalletView(name, ac, balance, currency.currencyView, configuration)
+      balance <- getBalance(w)
+      ac <- w.getAccountCount()
+    } yield WalletView(w.getName, ac, balance, w.getCurrency.currencyView, Map())
   }
 
-  def accountDerivationPathInfo(index: Int): Future[String] = {
-    coreW.getAccount(index).flatMap(_.getFreshPublicAddresses()).map(_.get(0).getDerivationPath)
+  def accountDerivationPathInfo(index: Int, w: core.Wallet)(implicit ec: ExecutionContext): Future[String] = {
+    w.getAccount(index).flatMap(_.getFreshPublicAddresses()).map(_.get(0).getDerivationPath)
   }
 
-  def account(index: Int): Future[Option[core.Account]] = {
-    coreW.getAccount(index).map { coreA =>
+  def account(index: Int, w: core.Wallet)(implicit ec: ExecutionContext): Future[Option[core.Account]] = {
+    w.getAccount(index).map { coreA =>
       Some(coreA)
     }.recover {
-      case _: implicits.AccountNotFoundException => Option.empty
+      case _: co.ledger.core.implicits.AccountNotFoundException => None
     }
   }
 
-  def accountCreationInfo(index: Option[Int]): Future[Derivation] = {
-    (index match {
-      case Some(i) => coreW.getAccountCreationInfo(i)
-      case None => coreW.getNextAccountCreationInfo()
-    }).map { info => Account.newDerivation(info) }
+  def accountCreationInfo(index: Option[Int], w: core.Wallet)(implicit ec: ExecutionContext): Future[Derivation] = {
+    index
+      .map(w.getAccountCreationInfo(_))
+      .getOrElse(w.getNextAccountCreationInfo())
+      .map(Account.newDerivation)
   }
 
-  def accountExtendedCreation(index: Option[Int]): Future[ExtendedDerivation] =
+  def accountExtendedCreation(index: Option[Int], w: core.Wallet)(implicit ec: ExecutionContext): Future[ExtendedDerivation] =
     index
-      .map(coreW.getExtendedKeyAccountCreationInfo(_))
-      .getOrElse(coreW.getNextExtendedKeyAccountCreationInfo())
+      .map(w.getExtendedKeyAccountCreationInfo(_))
+      .getOrElse(w.getNextExtendedKeyAccountCreationInfo())
       .map(new ExtendedDerivation(_))
 
-  def accounts(): Future[Seq[core.Account]] = {
-    coreW.getAccountCount().flatMap { count =>
-      coreW.getAccounts(0, count).map { coreAs =>
-        coreAs.asScala.map { coreA =>
-          println(coreA.getIndex)
-          coreA.startRealTimeObserver()
-          coreA
-        }.toList
-      }
-    }
+  def accounts(w: core.Wallet)(implicit ec: ExecutionContext): Future[Seq[core.Account]] = {
+    for {
+      count <- w.getAccountCount()
+      accounts <- w.getAccounts(0, count)
+    } yield accounts.asScala.map { a =>
+      a.startRealTimeObserver()
+      a
+    }.toList
   }
 
-  def addAccountIfNotExist(derivations: AccountExtendedDerivationView): Future[core.Account] = {
+  def addAccountIfNotExist(derivations: AccountExtendedDerivationView, w: core.Wallet)(implicit ec: ExecutionContext): Future[core.Account] = {
     val info = new core.ExtendedKeyAccountCreationInfo(
       derivations.accountIndex,
       derivations.derivations.map(_.owner).asArrayList,
       derivations.derivations.map(_.path).asArrayList,
       derivations.derivations.map(_.extKey.get).asArrayList
     )
-    accountCreationEpilogue(coreW.newAccountWithExtendedKeyInfo(info), derivations.accountIndex)
+    accountCreationEpilogue(w.newAccountWithExtendedKeyInfo(info), derivations.accountIndex, w)
   }
 
-  def addAccountIfNotExit(accountDerivations: AccountDerivationView): Future[core.Account] = {
+  def addAccountIfNotExist(accountDerivations: AccountDerivationView, w: core.Wallet)(implicit ec: ExecutionContext): Future[core.Account] = {
     val accountCreationInfo = new core.AccountCreationInfo(
       accountDerivations.accountIndex,
       accountDerivations.derivations.map(_.owner).asArrayList,
@@ -112,65 +113,51 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
       accountDerivations.derivations.map(d => HexUtils.valueOf(d.pubKey.get)).asArrayList,
       accountDerivations.derivations.map(d => HexUtils.valueOf(d.chainCode.get)).asArrayList
     )
-    accountCreationInfo.getOwners.asScala.foreach(o => println(s"Owner: $o"))
-    accountCreationEpilogue(coreW.newAccountWithInfo(accountCreationInfo), accountDerivations.accountIndex)
+    accountCreationEpilogue(w.newAccountWithInfo(accountCreationInfo), accountDerivations.accountIndex, w)
   }
 
-  private def accountCreationEpilogue(coreAccount: Future[core.Account], accountIndex: Int): Future[core.Account] = {
+  private def accountCreationEpilogue(coreAccount: Future[core.Account], accountIndex: Int, w: core.Wallet)(implicit ec: ExecutionContext): Future[core.Account] = {
     coreAccount.map { coreA =>
-      info(LogMsgMaker.newInstance("Account created").append("index", coreA.getIndex).append("wallet_name", name).toString())
+      info(LogMsgMaker.newInstance("Account created").append("index", coreA.getIndex).append("wallet_name", w.getName).toString())
       coreA
     }.recoverWith {
-      case e: implicits.InvalidArgumentException =>
+      case e: co.ledger.core.implicits.InvalidArgumentException =>
         Future.failed(CoreBadRequestException(e.getMessage, e))
-      case _: implicits.AccountAlreadyExistsException =>
+      case _: co.ledger.core.implicits.AccountAlreadyExistsException =>
         for {
-          _ <- Future(warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", name).toString()))
-          a <- coreW.getAccount(accountIndex).map { coreA =>
-            startListen(coreA)
+          _ <- Future(warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", w.getName).toString()))
+          a <- w.getAccount(accountIndex).map { coreA =>
+            startListenAccount(coreA)
             coreA
           }
         } yield a
     }
   }
 
-  def syncAccounts(poolName: String): Future[Seq[SynchronizationResult]] = {
-    accounts().flatMap { accounts =>
-      Future.sequence(accounts.map { account => account.sync(poolName, coreW.getName)})
+  def syncAccounts(poolName: String, w: core.Wallet)(implicit ec: ExecutionContext): Future[Seq[SynchronizationResult]] = {
+    accounts(w).flatMap { accounts =>
+      Future.sequence(accounts.map { account => account.sync(poolName, w.getName) })
     }
   }
 
-  def startCacheAndRealTimeObserver(): Future[Unit] = startListen()
+  def startCacheAndRealTimeObserver(w: core.Wallet)(implicit ec: ExecutionContext): Future[Unit] = startListenAccounts(w)
 
-  def stopRealTimeObserver(): Unit = {
-    accounts().map { as =>
-      debug(LogMsgMaker.newInstance("Stop real time observer").append("wallet", self).append("account_count", as.size).toString())
-      as.map { a => a.stopRealTimeObserver() }
+  def stopRealTimeObserver(w: core.Wallet)(implicit ec: ExecutionContext): Future[Unit] = {
+    accounts(w).map { as =>
+      debug(LogMsgMaker.newInstance("Stop real time observer").append("wallet", w).append("account_count", as.size).toString())
+      as.foreach { _.stopRealTimeObserver() }
     }
   }
 
-  override def equals(that: Any): Boolean = {
-    that match {
-      case that: Wallet => that.isInstanceOf[Wallet] && self.hashCode == that.hashCode
-      case _ => false
-    }
-  }
-
-  override def hashCode: Int = {
-    self.name.hashCode + self.currency.hashCode()
-  }
-
-  override def toString: String = s"Wallet(name: $name, currency: ${currency.getName})"
-
-  private def startListen(): Future[Unit] = {
-    coreW.getAccountCount().flatMap { count =>
-      coreW.getAccounts(0, count).map { coreAs =>
-          coreAs.asScala.foreach { coreA => startListen(coreA) }
-        }
+  private def startListenAccounts(w: core.Wallet)(implicit ec: ExecutionContext): Future[Unit] = {
+    w.getAccountCount().flatMap { count =>
+      w.getAccounts(0, count).map { coreAs =>
+        coreAs.asScala.foreach { coreA => startListenAccount(coreA) }
       }
     }
+  }
 
-  private def startListen(coreA: core.Account): core.Account = {
+  private def startListenAccount(coreA: core.Account): core.Account = {
     if (DaemonConfiguration.realTimeObserverOn && !coreA.isObservingBlockchain) {
       coreA.startBlockchainObservation()
       debug(LogMsgMaker.newInstance(s"Real time observer on ${coreA.isObservingBlockchain}").append("account", coreA.getIndex).toString())
@@ -178,17 +165,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     coreA
   }
 
-  private def getBalance: Future[Long] = {
-    accounts().flatMap { as =>
-      Future.sequence( for (a <- as) yield a.balance ).map { b => b.sum }
+  private def getBalance(w: core.Wallet)(implicit ec: ExecutionContext): Future[Long] = {
+    accounts(w).flatMap { as =>
+      Future.sequence(for (a <- as) yield a.balance).map { b => b.sum }
     }
-  }
-
-}
-
-object Wallet {
-  def newInstance(coreW: core.Wallet, pool: Pool): Wallet = {
-    new Wallet(coreW, pool)
   }
 }
 

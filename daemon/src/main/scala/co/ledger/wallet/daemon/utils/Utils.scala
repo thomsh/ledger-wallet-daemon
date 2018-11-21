@@ -50,7 +50,7 @@ object Utils {
   }
 
   def optionSequence[T](input: Option[ScalaFuture[T]])(implicit ec: ExecutionContext): ScalaFuture[Option[T]] = input match {
-    case None => ScalaFuture(Option.empty[T])
+    case None => ScalaFuture(None)
     case Some(in) => in.map ( t => Some(t))
   }
 

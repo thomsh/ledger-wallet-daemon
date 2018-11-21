@@ -1,14 +1,14 @@
 package co.ledger.wallet.daemon.services
 
-import javax.inject.{Inject, Singleton}
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.controllers.TransactionsController.{AccountInfo, TransactionInfo}
 import co.ledger.wallet.daemon.database.DefaultDaemonCache
 import co.ledger.wallet.daemon.exceptions.WalletNotFoundException
-import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
 import co.ledger.wallet.daemon.models.Account._
+import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
 import co.ledger.wallet.daemon.utils.Utils._
-import co.ledger.wallet.daemon.models.Currency._
+import javax.inject.{Inject, Singleton}
+import co.ledger.wallet.daemon.models.Wallet._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,7 +30,7 @@ class TransactionsService @Inject()(defaultDaemonCache: DefaultDaemonCache) exte
       wallet <- walletOption.toFuture(WalletNotFoundException(accountInfo.walletName))
       tv <- defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
         .flatMap { case (_, _, account) =>
-          account.createTransaction(transactionInfo, wallet.currency)
+          account.createTransaction(transactionInfo, wallet.getCurrency)
         }
     } yield tv
   }
@@ -42,7 +42,7 @@ class TransactionsService @Inject()(defaultDaemonCache: DefaultDaemonCache) exte
       currentHeight <- wallet.lastBlockHeight
       r <- defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
         .flatMap { case (_, _, account) =>
-          account.signBTCTransaction(rawTx, pairedSignatures, currentHeight, wallet.currency)
+          account.signBTCTransaction(rawTx, pairedSignatures, currentHeight, wallet.getCurrency)
         }
     } yield r
   }

@@ -26,7 +26,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
       walletOption <- defaultDaemonCache.getWallet(walletName, poolName, user.pubKey)
       wallet <- walletOption.toFuture(WalletNotFoundException(walletName))
       aws <- defaultDaemonCache.getAccounts(user.pubKey, poolName, walletName).flatMap { accounts =>
-        Future.sequence(accounts.map { account => account.accountView(walletName, wallet.currency.currencyView) })
+        Future.sequence(accounts.map { account => account.accountView(walletName, wallet.getCurrency.currencyView) })
       }
     } yield aws
   }
@@ -36,7 +36,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
       walletOption <- defaultDaemonCache.getWallet(walletName, poolName, user.pubKey)
       wallet <- walletOption.toFuture(WalletNotFoundException(walletName))
       accountViewOption <- defaultDaemonCache.getAccount(accountIndex, user.pubKey, poolName, walletName).flatMap {
-        case Some(account) => account.accountView(walletName, wallet.currency.currencyView).map(Option(_))
+        case Some(account) => account.accountView(walletName, wallet.getCurrency.currencyView).map(Option(_))
         case None => Future(None)
       }
     } yield accountViewOption
@@ -106,7 +106,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
     for {
       walletOption <- defaultDaemonCache.getWallet(walletName, poolName, user.pubKey)
       wallet <- walletOption.toFuture(WalletNotFoundException(walletName))
-      aw <- defaultDaemonCache.createAccount(accountCreationBody, user, poolName, walletName).flatMap(_.accountView(walletName, wallet.currency.currencyView))
+      aw <- defaultDaemonCache.createAccount(accountCreationBody, user, poolName, walletName).flatMap(_.accountView(walletName, wallet.getCurrency.currencyView))
     } yield aw
   }
 
@@ -114,7 +114,7 @@ class AccountsService @Inject()(defaultDaemonCache: DaemonCache) extends DaemonS
     for {
       walletOption <- defaultDaemonCache.getWallet(walletName, poolName, user.pubKey)
       wallet <- walletOption.toFuture(WalletNotFoundException(walletName))
-      aw <- defaultDaemonCache.createAccount(derivations, user, poolName, walletName).flatMap(_.accountView(walletName, wallet.currency.currencyView))
+      aw <- defaultDaemonCache.createAccount(derivations, user, poolName, walletName).flatMap(_.accountView(walletName, wallet.getCurrency.currencyView))
     } yield aw
   }
 

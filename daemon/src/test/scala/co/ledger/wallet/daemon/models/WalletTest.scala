@@ -8,8 +8,9 @@ import co.ledger.wallet.daemon.models.Account._
 import djinni.NativeLibLoader
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
-import co.ledger.core.Account
-import Currency._
+import co.ledger.core
+import Currency.RichCoreCurrency
+import Wallet.RichCoreWallet
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
@@ -27,9 +28,9 @@ class WalletTest extends AssertionsForJUnit {
 
   private val testPool = Pool.newInstance(Await.result(Pool.newCoreInstance(new PoolDto(UUID.randomUUID().toString, 2L, "", Option(0L))), Duration.Inf), 1L)
 
-  private val testWallet = Await.result(testPool.addWalletIfNotExit("test_wallet", "bitcoin"), Duration.Inf)
+  private val testWallet = Await.result(testPool.addWalletIfNotExist("test_wallet", "bitcoin"), Duration.Inf)
 
-  private val testAccount: Account = Await.result(testWallet.accounts().flatMap { as =>
+  private val testAccount: core.Account = Await.result(testWallet.accounts.flatMap { as =>
     assert(as.isEmpty)
     testWallet.accountCreationInfo(None).map { derivation =>
       AccountDerivationView(
@@ -39,10 +40,10 @@ class WalletTest extends AssertionsForJUnit {
         }
       )
     }.flatMap { info =>
-      testWallet.addAccountIfNotExit(info) }
+      testWallet.addAccountIfNotExist(info) }
   }, Duration.Inf)
 
-  private val account6: Account = Await.result(
+  private val account6: core.Account = Await.result(
     testWallet.accountCreationInfo(Option(6)).map { derivation =>
       AccountDerivationView(
         derivation.index,
@@ -50,9 +51,9 @@ class WalletTest extends AssertionsForJUnit {
           DerivationView(d._1.path, d._1.owner, Option(PUBKEYS(d._2)), Option(CHAINCODES(d._2)))
         }
       )
-    }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
+    }.flatMap { info => testWallet.addAccountIfNotExist(info) } , Duration.Inf)
 
-  private val account4: Account = Await.result(
+  private val account4: core.Account = Await.result(
     testWallet.accountCreationInfo(Option(4)).map { derivation =>
       AccountDerivationView(
         derivation.index,
@@ -60,11 +61,11 @@ class WalletTest extends AssertionsForJUnit {
           DerivationView(d._1.path, d._1.owner, Option(PUBKEYS(d._2)), Option(CHAINCODES(d._2)))
         }
       )
-    }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
+    }.flatMap { info => testWallet.addAccountIfNotExist(info) } , Duration.Inf)
 
   @Test def verifyWalletActivities(): Unit = {
     println("first lime in test")
-    val accounts = Await.result(testWallet.accounts(), Duration.Inf)
+    val accounts = Await.result(testWallet.accounts, Duration.Inf)
     assert(3 === accounts.size)
     assert(testAccount.getIndex === accounts.head.getIndex)
     assert(account6.getIndex === accounts.tail.head.getIndex)
@@ -72,7 +73,7 @@ class WalletTest extends AssertionsForJUnit {
     val account = Await.result(testWallet.account(testAccount.getIndex), Duration.Inf)
     assert(account.map(_.getIndex) === accounts.headOption.map(_.getIndex))
     val walletView = Await.result(testWallet.walletView, Duration.Inf)
-    val accountView = Await.result(testAccount.accountView(testWallet.name, testWallet.currency.currencyView), Duration.Inf)
+    val accountView = Await.result(testAccount.accountView(testWallet.getName, testWallet.getCurrency.currencyView), Duration.Inf)
     assert(walletView.balance === accountView.index)
     assert(0 === testAccount.getIndex)
     assert(6 === account6.getIndex)

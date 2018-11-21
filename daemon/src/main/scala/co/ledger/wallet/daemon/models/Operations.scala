@@ -10,6 +10,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext.Implicits.global
 import com.fasterxml.jackson.annotation.JsonProperty
+import Wallet.RichCoreWallet
 /**
   * The operation related functions.
   *
@@ -19,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
   *
   */
 object Operations {
-  def confirmations(operation: core.Operation, wallet: Wallet): Future[Long] = {
+  def confirmations(operation: core.Operation, wallet: core.Wallet): Future[Long] = {
     for {
       currentHeight <- wallet.lastBlockHeight
     } yield Option(operation.getBlockHeight) match {
@@ -28,22 +29,22 @@ object Operations {
     }
   }
 
-  def getView(operation: core.Operation, wallet: Wallet, account: core.Account): Future[OperationView] = {
+  def getView(operation: core.Operation, wallet: core.Wallet, account: core.Account): Future[OperationView] = {
     for {
       confirms <- confirmations(operation, wallet)
       curFamily = operation.getWalletType
     } yield OperationView(
       operation.getUid,
-      wallet.currency.getName,
+      wallet.getCurrency.getName,
       curFamily,
-      Option(operation.getTrust).map(getTrustIndicatorView(_)),
+      Option(operation.getTrust).map(getTrustIndicatorView),
       confirms,
       operation.getDate,
       Option(operation.getBlockHeight),
       operation.getOperationType,
       operation.getAmount.toLong,
       operation.getFees.toLong,
-      wallet.name,
+      wallet.getName,
       account.getIndex,
       operation.getSenders.asScala.toList,
       operation.getRecipients.asScala.toList,
@@ -64,7 +65,7 @@ object Operations {
       curFamily match {
         case core.WalletType.BITCOIN => Some(Bitcoin.newTransactionView(operation.asBitcoinLikeOperation().getTransaction))
       }
-    } else Option.empty[TransactionView]
+    } else None
   }
 
   case class OperationView(

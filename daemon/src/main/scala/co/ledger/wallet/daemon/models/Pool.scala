@@ -1,8 +1,7 @@
 package co.ledger.wallet.daemon.models
 
 import co.ledger.core
-import co.ledger.core.implicits
-import co.ledger.core.implicits.{CurrencyNotFoundException => CoreCurrencyNotFoundException, _}
+import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.clients.ClientFactory
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
@@ -18,6 +17,7 @@ import co.ledger.wallet.daemon.utils.{HexUtils, Utils}
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.twitter.inject.Logging
 import org.bitcoinj.core.Sha256Hash
+import Wallet._
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -41,23 +41,21 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     * @param batch the size of query.
     * @return a tuple of total wallet count and a sequence of wallets from offset to batch size.
     */
-  def wallets(offset: Int, batch: Int): Future[(Int, Seq[Wallet])] = {
+  def wallets(offset: Int, batch: Int): Future[(Int, Seq[core.Wallet])] = {
     assert(offset >= 0, s"offset invalid $offset")
     assert(batch > 0, "batch must be positive")
     coreP.getWalletCount().flatMap { count =>
       val size = batch min (count - offset)
       coreP.getWallets(offset, size).map { coreWs =>
-        coreWs.asScala.map { coreW =>
-          Wallet.newInstance(coreW, self)
-        }.toList
+        coreWs.asScala.toList
       }.map ((count, _))
     }
   }
 
-  private def startListen(wallet: Wallet): Future[Wallet] = {
+  private def startListen(wallet: core.Wallet): Future[core.Wallet] = {
     for {
       _ <- Future (self.registerEventReceiver(new NewBlockEventReceiver(wallet)))
-      _ <- wallet.startCacheAndRealTimeObserver()
+      _ <- wallet.startCacheAndRealTimeObserver
     } yield wallet
   }
 
@@ -67,10 +65,9 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     * @param walletName name of wallet.
     * @return a future of optional wallet.
     */
-  def wallet(walletName: String): Future[Option[Wallet]] = {
-    coreP.getWallet(walletName).map { coreW => Some(Wallet.newInstance(coreW, self)) }
-        .recover {
-          case _: implicits.WalletNotFoundException => Option.empty[Wallet]
+  def wallet(walletName: String): Future[Option[core.Wallet]] = {
+    coreP.getWallet(walletName).map(Option(_)).recover {
+          case _: co.ledger.core.implicits.WalletNotFoundException => None
         }
   }
 
@@ -82,7 +79,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     */
   def currency(currencyName: String): Future[Option[core.Currency]] =
     coreP.getCurrency(currencyName).map(Option.apply).recover {
-      case _: CoreCurrencyNotFoundException => None
+      case _: core.implicits.CurrencyNotFoundException => None
     }
 
   /**
@@ -105,11 +102,11 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     }
   }
 
-  def addWalletIfNotExit(walletName: String, currencyName: String): Future[Wallet] = {
+  def addWalletIfNotExist(walletName: String, currencyName: String): Future[core.Wallet] = {
     coreP.getCurrency(currencyName).flatMap { coreC =>
       coreP.createWallet(walletName, coreC, core.DynamicObject.newInstance()).flatMap { coreW =>
         info(LogMsgMaker.newInstance("Wallet created").append("name", walletName).append("pool_name", name).append("currency_name", currencyName).toString())
-        startListen(Wallet.newInstance(coreW, self))
+        startListen(coreW)
       }.recoverWith {
         case _: WalletAlreadyExistsException =>
           warn(LogMsgMaker.newInstance("Wallet already exist")
@@ -117,10 +114,10 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
             .append("pool_name", name)
             .append("currency_name", currencyName)
             .toString())
-          coreP.getWallet(walletName).flatMap { coreW => startListen(Wallet.newInstance(coreW, self)) }
+          coreP.getWallet(walletName).flatMap { coreW => startListen(coreW) }
       }
     }.recoverWith {
-      case _: CoreCurrencyNotFoundException => Future.failed(CurrencyNotFoundException(currencyName))
+      case _: core.implicits.CurrencyNotFoundException => Future.failed(CurrencyNotFoundException(currencyName))
     }
   }
 
@@ -160,7 +157,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     for {
       count <- coreP.getWalletCount()
       wallets <- coreP.getWallets(0, count)
-      result <- Future.sequence(wallets.asScala.map { wallet => Wallet.newInstance(wallet, self).syncAccounts(name) }).map(_.flatten)
+      result <- Future.sequence(wallets.asScala.map { wallet => wallet.syncAccounts(name) }).map(_.flatten)
     } yield result
   }
 
@@ -172,7 +169,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
   def startRealTimeObserver(): Future[Unit] = {
     coreP.getWalletCount().map { count =>
       coreP.getWallets(0, count).map { coreWs =>
-        coreWs.asScala.map { coreW => startListen(Wallet.newInstance(coreW, self)) }
+        coreWs.asScala.map { coreW => startListen(coreW) }
       }
     }
   }
@@ -186,7 +183,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     debug(LogMsgMaker.newInstance("Stop real time observer").append("pool", name).toString())
     coreP.getWalletCount().map { count =>
       coreP.getWallets(0, count).map { coreWs =>
-        coreWs.asScala.foreach { coreW => Wallet.newInstance(coreW, self).stopRealTimeObserver() }
+        coreWs.asScala.foreach { coreW => coreW.stopRealTimeObserver }
       }
     }
   }

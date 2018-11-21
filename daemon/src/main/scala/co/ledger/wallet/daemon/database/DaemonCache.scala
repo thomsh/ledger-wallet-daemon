@@ -7,7 +7,8 @@ import co.ledger.wallet.daemon.models.Account.{Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
-import co.ledger.core.{Currency, Account}
+import co.ledger.core.{Account, Currency, Wallet}
+import co.ledger.wallet.daemon.exceptions.UserNotFoundException
 
 import scala.concurrent.Future
 
