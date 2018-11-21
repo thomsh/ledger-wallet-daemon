@@ -18,6 +18,7 @@ import com.twitter.finatra.http.Controller
 import com.twitter.finatra.request.{QueryParam, RouteParam}
 import com.twitter.finatra.validation.{MethodValidation, ValidationResult}
 import javax.inject.Inject
+import co.ledger.wallet.daemon.models.Account._
 
 import scala.concurrent.ExecutionContext
 

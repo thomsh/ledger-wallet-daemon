@@ -45,7 +45,7 @@ trait APIFeatureTest extends FeatureTest {
   }
 
   def assertSyncPool(expected: Status): Response = {
-    server.httpPost(s"/pools/operations/synchronize", "", headers = defaultHeaders, andExpect = expected)
+    server.httpPost("/pools/operations/synchronize", "", headers = defaultHeaders, andExpect = expected)
   }
 
   protected def assertCreateAccount(accountCreationBody: String, poolName: String, walletName: String, expected: Status): Response = {

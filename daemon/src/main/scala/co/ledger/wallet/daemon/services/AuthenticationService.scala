@@ -8,7 +8,8 @@ import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.database.DaemonCache
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.services.AuthenticationService.{AuthenticationFailedException, AuthentifiedUserContext, UserNotFoundException}
-import co.ledger.wallet.daemon.utils._
+import co.ledger.wallet.daemon.utils.HexUtils
+import co.ledger.wallet.daemon.utils.Utils._
 import com.twitter.finagle.http.Request
 import com.twitter.util.Future
 import org.bitcoinj.core.Sha256Hash

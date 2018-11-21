@@ -4,10 +4,12 @@ import java.util.UUID
 
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.database.PoolDto
-import co.ledger.wallet.daemon.models.Account.Account
+import co.ledger.wallet.daemon.models.Account._
 import djinni.NativeLibLoader
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
+import co.ledger.core.Account
+import Currency._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
@@ -64,17 +66,17 @@ class WalletTest extends AssertionsForJUnit {
     println("first lime in test")
     val accounts = Await.result(testWallet.accounts(), Duration.Inf)
     assert(3 === accounts.size)
-    assert(testAccount.index === accounts.head.index)
-    assert(account6.index === accounts.tail.head.index)
-    assert(account4.index === accounts.tail.tail.head.index)
-    val account = Await.result(testWallet.account(testAccount.index), Duration.Inf)
-    assert(account.map(_.index) === accounts.headOption.map(_.index))
+    assert(testAccount.getIndex === accounts.head.getIndex)
+    assert(account6.getIndex === accounts.tail.head.getIndex)
+    assert(account4.getIndex === accounts.tail.tail.head.getIndex)
+    val account = Await.result(testWallet.account(testAccount.getIndex), Duration.Inf)
+    assert(account.map(_.getIndex) === accounts.headOption.map(_.getIndex))
     val walletView = Await.result(testWallet.walletView, Duration.Inf)
-    val accountView = Await.result(testAccount.accountView, Duration.Inf)
-    assert(walletView.balance === accountView.balance)
-    assert(0 === testAccount.index)
-    assert(6 === account6.index)
-    assert(4 === account4.index)
+    val accountView = Await.result(testAccount.accountView(testWallet.name, testWallet.currency.currencyView), Duration.Inf)
+    assert(walletView.balance === accountView.index)
+    assert(0 === testAccount.getIndex)
+    assert(6 === account6.getIndex)
+    assert(4 === account4.getIndex)
     testPool.stopRealTimeObserver()
   }
 

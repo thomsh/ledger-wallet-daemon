@@ -6,8 +6,7 @@ import co.ledger.core
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.models.coins.Coin._
-import co.ledger.wallet.daemon.utils
-import co.ledger.wallet.daemon.utils.HexUtils
+import co.ledger.wallet.daemon.utils.{HexUtils, Utils}
 import com.fasterxml.jackson.annotation.JsonProperty
 
 import scala.collection.JavaConverters._
@@ -20,7 +19,7 @@ object Bitcoin {
   def newNetworkParamsView(from: core.BitcoinLikeNetworkParameters): NetworkParamsView = {
     BitcoinNetworkParamsView(
       from.getIdentifier,
-      utils.HexUtils.valueOf(from.getP2PKHVersion),
+      HexUtils.valueOf(from.getP2PKHVersion),
       HexUtils.valueOf(from.getP2SHVersion),
       HexUtils.valueOf(from.getXPUBVersion),
       from.getFeePolicy.name,

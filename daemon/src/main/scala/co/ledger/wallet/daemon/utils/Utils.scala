@@ -1,8 +1,8 @@
-package co.ledger.wallet.daemon
+package co.ledger.wallet.daemon.utils
 
 import scala.collection.mutable
 
-package object utils {
+object Utils {
 
   import com.twitter.util.{Return, Throw, Future => TwitterFuture, Promise => TwitterPromise}
 
@@ -34,8 +34,15 @@ package object utils {
     }
   }
 
-  class AsArrayList[T](input: Seq[T]) {
+  implicit class AsArrayList[T](val input: Seq[T]) extends AnyVal {
     def asArrayList : java.util.ArrayList[T] = new java.util.ArrayList[T](input.asJava)
+  }
+
+  implicit class RichOption[T](val input: Option[T]) extends AnyVal {
+    def toFuture(t: Throwable): ScalaFuture[T] = input match {
+      case Some(v) => ScalaFuture.successful(v)
+      case None => ScalaFuture.failed(t)
+    }
   }
 
   def newConcurrentSet[T]: mutable.Set[T] = {

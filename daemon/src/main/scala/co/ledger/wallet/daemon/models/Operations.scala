@@ -3,7 +3,6 @@ package co.ledger.wallet.daemon.models
 import java.util.{Date, UUID}
 
 import co.ledger.core
-import co.ledger.wallet.daemon.models.Account.Account
 import co.ledger.wallet.daemon.models.coins.Bitcoin
 import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
 
@@ -29,7 +28,7 @@ object Operations {
     }
   }
 
-  def getView(operation: core.Operation, wallet: Wallet, account: Account): Future[OperationView] = {
+  def getView(operation: core.Operation, wallet: Wallet, account: core.Account): Future[OperationView] = {
     for {
       confirms <- confirmations(operation, wallet)
       curFamily = operation.getWalletType
@@ -45,7 +44,7 @@ object Operations {
       operation.getAmount.toLong,
       operation.getFees.toLong,
       wallet.name,
-      account.index,
+      account.getIndex,
       operation.getSenders.asScala.toList,
       operation.getRecipients.asScala.toList,
       getTransactionView(operation, curFamily)

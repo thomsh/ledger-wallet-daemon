@@ -14,8 +14,7 @@ import co.ledger.wallet.daemon.libledger_core.debug.NoOpLogPrinter
 import co.ledger.wallet.daemon.libledger_core.filesystem.ScalaPathResolver
 import co.ledger.wallet.daemon.schedulers.observers.{NewBlockEventReceiver, SynchronizationResult}
 import co.ledger.wallet.daemon.services.LogMsgMaker
-import co.ledger.wallet.daemon.utils
-import co.ledger.wallet.daemon.utils.HexUtils
+import co.ledger.wallet.daemon.utils.{HexUtils, Utils}
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.twitter.inject.Logging
 import org.bitcoinj.core.Sha256Hash
@@ -29,7 +28,7 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
 
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
   private val _coreExecutionContext = LedgerCoreExecutionContext.newThreadPool()
-  private[this] val eventReceivers: mutable.Set[core.EventReceiver] = utils.newConcurrentSet[core.EventReceiver]
+  private[this] val eventReceivers: mutable.Set[core.EventReceiver] = Utils.newConcurrentSet[core.EventReceiver]
 
   val name: String = coreP.getName
 

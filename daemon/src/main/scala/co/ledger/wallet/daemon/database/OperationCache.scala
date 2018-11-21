@@ -2,12 +2,12 @@ package co.ledger.wallet.daemon.database
 
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
-import javax.inject.Singleton
 
+import javax.inject.Singleton
 import co.ledger.wallet.daemon.exceptions.OperationNotFoundException
 import co.ledger.wallet.daemon.models.GenCache
 import co.ledger.wallet.daemon.services.LogMsgMaker
-import co.ledger.wallet.daemon.utils
+import co.ledger.wallet.daemon.utils.Utils
 import com.twitter.inject.Logging
 
 import scala.collection.mutable
@@ -182,7 +182,7 @@ class OperationCache extends Logging with GenCache {
   }
 
   def newAccountTreeInstance(index: Int, operation: UUID): AccountTree = {
-    new AccountTree(index, utils.newConcurrentSet[UUID] += operation)
+    new AccountTree(index, Utils.newConcurrentSet[UUID] += operation)
   }
 
   class AccountTree(val index: Int, val operations:  mutable.Set[UUID]) {

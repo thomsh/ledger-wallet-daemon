@@ -4,12 +4,12 @@ import javax.inject.Singleton
 
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.models.FeeMethod
-import co.ledger.wallet.daemon.utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.twitter.finagle.Http
+import co.ledger.wallet.daemon.utils.Utils._
 import com.twitter.finagle.http.{Method, Request}
 
 import scala.concurrent.{ExecutionContext, Future}

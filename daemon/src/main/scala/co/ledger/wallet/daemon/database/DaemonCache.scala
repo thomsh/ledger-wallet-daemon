@@ -3,11 +3,11 @@ package co.ledger.wallet.daemon.database
 import java.util.UUID
 
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
-import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
+import co.ledger.wallet.daemon.models.Account.{Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
-import co.ledger.core.Currency
+import co.ledger.core.{Currency, Account}
 
 import scala.concurrent.Future
 

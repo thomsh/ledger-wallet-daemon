@@ -1,11 +1,14 @@
 package co.ledger.wallet.daemon.services
 
 import javax.inject.{Inject, Singleton}
-
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.controllers.TransactionsController.{AccountInfo, TransactionInfo}
 import co.ledger.wallet.daemon.database.DefaultDaemonCache
+import co.ledger.wallet.daemon.exceptions.WalletNotFoundException
 import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
+import co.ledger.wallet.daemon.models.Account._
+import co.ledger.wallet.daemon.utils.Utils._
+import co.ledger.wallet.daemon.models.Currency._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,17 +25,25 @@ class TransactionsService @Inject()(defaultDaemonCache: DefaultDaemonCache) exte
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
 
   def createTransaction(transactionInfo: TransactionInfo, accountInfo: AccountInfo): Future[TransactionView] = {
-
-    defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
-      .flatMap { case (_, _, account) =>
-        account.createTransaction(transactionInfo)
-    }
+    for {
+      walletOption <- defaultDaemonCache.getWallet(accountInfo.walletName, accountInfo.poolName, accountInfo.user.pubKey)
+      wallet <- walletOption.toFuture(WalletNotFoundException(accountInfo.walletName))
+      tv <- defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
+        .flatMap { case (_, _, account) =>
+          account.createTransaction(transactionInfo, wallet.currency)
+        }
+    } yield tv
   }
 
   def signTransaction(rawTx: Array[Byte], pairedSignatures: Seq[(Array[Byte],Array[Byte])], accountInfo: AccountInfo): Future[String] = {
-    defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
-      .flatMap { case (_, _, account) =>
-        account.signTransaction(rawTx, pairedSignatures)
-      }
+    for {
+      walletOption <- defaultDaemonCache.getWallet(accountInfo.walletName, accountInfo.poolName, accountInfo.user.pubKey)
+      wallet <- walletOption.toFuture(WalletNotFoundException(accountInfo.walletName))
+      currentHeight <- wallet.lastBlockHeight
+      r <- defaultDaemonCache.getHardAccount(accountInfo.user, accountInfo.poolName, accountInfo.walletName, accountInfo.index)
+        .flatMap { case (_, _, account) =>
+          account.signBTCTransaction(rawTx, pairedSignatures, currentHeight, wallet.currency)
+        }
+    } yield r
   }
 }

@@ -5,11 +5,13 @@ import java.util.UUID
 import co.ledger.core.Address
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.database.PoolDto
-import co.ledger.wallet.daemon.models.Account.Account
+import co.ledger.wallet.daemon.models.Account._
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 import djinni.NativeLibLoader
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
+import co.ledger.core
+import Account._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
@@ -29,7 +31,7 @@ class AccountTest extends AssertionsForJUnit {
 
   private val testWallet = Await.result(testPool.addWalletIfNotExit("test_wallet", "bitcoin"), Duration.Inf)
 
-  private val account0: Account = Await.result(
+  private val account0: core.Account = Await.result(
     testWallet.accountCreationInfo(Option(0)).map { derivation =>
       AccountDerivationView(
         derivation.index,
@@ -38,11 +40,11 @@ class AccountTest extends AssertionsForJUnit {
         }
       )
     }.flatMap { info => testWallet.addAccountIfNotExit(info)
-      .flatMap { a => a.sync(testPool.name).map { syncResult =>
+      .flatMap { a => a.sync(testPool.name, testWallet.name).map { syncResult =>
         assert(SynchronizationResult(0, testWallet.name, testPool.name, true) === syncResult)
         a } } } , Duration.Inf)
 
-  private val account1: Account = Await.result(
+  private val account1: core.Account = Await.result(
     testWallet.accountCreationInfo(Option(1)).map { derivation =>
       AccountDerivationView(
         derivation.index,
@@ -52,7 +54,7 @@ class AccountTest extends AssertionsForJUnit {
       )
     }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
 
-  private val account2: Account = Await.result(
+  private val account2: core.Account = Await.result(
     testWallet.accountCreationInfo(Option(2)).map { derivation =>
       AccountDerivationView(
         derivation.index,
@@ -62,12 +64,12 @@ class AccountTest extends AssertionsForJUnit {
       )
     }.flatMap { info => testWallet.addAccountIfNotExit(info) } , Duration.Inf)
 
-  private val freshAddresses: Seq[Address] = Await.result(account2.freshAddresses(), Duration.Inf)
+  private val freshAddresses: Seq[Address] = Await.result(account2.freshAddresses, Duration.Inf)
 
   @Test def verifyAccountCreation(): Unit = {
-    assert(0 === account0.index)
-    assert(1 === account1.index)
-    assert(2 === account2.index)
+    assert(0 === account0.getIndex)
+    assert(1 === account1.getIndex)
+    assert(2 === account2.getIndex)
     val emptyOp = Await.result(account0.operation("nonexistoperation", 1), Duration.Inf)
     assert(emptyOp.isEmpty)
     val operations = Await.result(account0.operations(0, 1, 1), Duration.Inf)

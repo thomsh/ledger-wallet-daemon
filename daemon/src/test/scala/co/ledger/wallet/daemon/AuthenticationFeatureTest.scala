@@ -4,7 +4,8 @@ import java.nio.charset.StandardCharsets
 import java.util.{Base64, Date}
 
 import co.ledger.wallet.daemon.services.ECDSAService
-import co.ledger.wallet.daemon.utils.{FixturesUtils, HexUtils}
+import co.ledger.wallet.daemon.utils.FixturesUtils
+import co.ledger.wallet.daemon.utils.HexUtils
 import com.twitter.finatra.http.EmbeddedHttpServer
 import com.twitter.inject.server.FeatureTest
 import org.bitcoinj.core.Sha256Hash

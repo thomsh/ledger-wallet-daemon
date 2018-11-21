@@ -186,17 +186,15 @@ class AccountsApiTest extends APIFeatureTest {
 
   private def assertGetAccountOps(poolName: String, walletName: String, accountIndex: Int, params: OperationQueryParams, expected: Status): Response = {
     val sb = new StringBuilder(s"/pools/$poolName/wallets/$walletName/accounts/$accountIndex/operations?")
-    params.previous match {
-      case None =>
-      case Some(p) => sb.append("previous=" + p.toString + "&")
+    params.previous.foreach { p =>
+      sb.append("previous=" + p.toString + "&")
     }
-    params.next match {
-      case None =>
-      case Some(n) => sb.append("next=" + n.toString + "&")
+    params.next.foreach { n =>
+      sb.append("next=" + n.toString + "&")
     }
     sb.append(s"batch=${params.batch}&full_op=${params.fullOp}")
-    val previous = if (params.previous.isEmpty) null else params.previous.get
-    val next = if (params.next.isEmpty) null else params.next.get
+    val previous = params.previous.orNull
+    val next = params.next.orNull
     server.httpGet(sb.toString(), headers = defaultHeaders, andExpect = expected)
   }
 

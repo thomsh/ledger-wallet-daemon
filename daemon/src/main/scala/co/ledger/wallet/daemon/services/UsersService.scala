@@ -2,8 +2,8 @@ package co.ledger.wallet.daemon.services
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import co.ledger.wallet.daemon.database.DaemonCache
 import co.ledger.wallet.daemon.database.DefaultDaemonCache.User
 import co.ledger.wallet.daemon.exceptions.UserAlreadyExistException

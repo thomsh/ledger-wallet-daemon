@@ -8,10 +8,10 @@ import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.exceptions.CoreBadRequestException
-import co.ledger.wallet.daemon.models.Account.{Account, Derivation, ExtendedDerivation}
+import co.ledger.wallet.daemon.models.Account.{Derivation, ExtendedDerivation}
 import co.ledger.wallet.daemon.schedulers.observers.SynchronizationResult
 import co.ledger.wallet.daemon.services.LogMsgMaker
-import co.ledger.wallet.daemon.utils.{AsArrayList, HexUtils}
+import co.ledger.wallet.daemon.utils.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.twitter.inject.Logging
 
@@ -20,12 +20,13 @@ import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import Currency._
+import Account._
+import co.ledger.wallet.daemon.utils.HexUtils
 
 class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Logging {
   private[this] val self = this
 
   implicit val ec: ExecutionContext = MDCPropagatingExecutionContext.Implicits.global
-  implicit def asArrayList[T](input: Seq[T]): AsArrayList[T] = new AsArrayList[T](input)
   private val configuration: Map[String, Any] = Map[String, Any]()
   private[this] val currentBlockHeight: AtomicLong = new AtomicLong(-1)
 
@@ -60,11 +61,11 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     coreW.getAccount(index).flatMap(_.getFreshPublicAddresses()).map(_.get(0).getDerivationPath)
   }
 
-  def account(index: Int): Future[Option[Account]] = {
+  def account(index: Int): Future[Option[core.Account]] = {
     coreW.getAccount(index).map { coreA =>
-      Some(Account.newInstance(coreA, self))
+      Some(coreA)
     }.recover {
-      case _: implicits.AccountNotFoundException => Option.empty[Account]
+      case _: implicits.AccountNotFoundException => Option.empty
     }
   }
 
@@ -81,20 +82,19 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
       .getOrElse(coreW.getNextExtendedKeyAccountCreationInfo())
       .map(new ExtendedDerivation(_))
 
-  def accounts(): Future[Seq[Account]] = {
+  def accounts(): Future[Seq[core.Account]] = {
     coreW.getAccountCount().flatMap { count =>
       coreW.getAccounts(0, count).map { coreAs =>
         coreAs.asScala.map { coreA =>
           println(coreA.getIndex)
-          val account = Account.newInstance(coreA, self)
-          account.startRealTimeObserver()
-          account
+          coreA.startRealTimeObserver()
+          coreA
         }.toList
       }
     }
   }
 
-  def addAccountIfNotExist(derivations: AccountExtendedDerivationView): Future[Account] = {
+  def addAccountIfNotExist(derivations: AccountExtendedDerivationView): Future[core.Account] = {
     val info = new core.ExtendedKeyAccountCreationInfo(
       derivations.accountIndex,
       derivations.derivations.map(_.owner).asArrayList,
@@ -104,7 +104,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     accountCreationEpilogue(coreW.newAccountWithExtendedKeyInfo(info), derivations.accountIndex)
   }
 
-  def addAccountIfNotExit(accountDerivations: AccountDerivationView): Future[Account] = {
+  def addAccountIfNotExit(accountDerivations: AccountDerivationView): Future[core.Account] = {
     val accountCreationInfo = new core.AccountCreationInfo(
       accountDerivations.accountIndex,
       accountDerivations.derivations.map(_.owner).asArrayList,
@@ -116,10 +116,10 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
     accountCreationEpilogue(coreW.newAccountWithInfo(accountCreationInfo), accountDerivations.accountIndex)
   }
 
-  private def accountCreationEpilogue(coreAccount: Future[core.Account], accountIndex: Int): Future[Account] = {
+  private def accountCreationEpilogue(coreAccount: Future[core.Account], accountIndex: Int): Future[core.Account] = {
     coreAccount.map { coreA =>
       info(LogMsgMaker.newInstance("Account created").append("index", coreA.getIndex).append("wallet_name", name).toString())
-      Account.newInstance(startListen(coreA), self)
+      coreA
     }.recoverWith {
       case e: implicits.InvalidArgumentException =>
         Future.failed(CoreBadRequestException(e.getMessage, e))
@@ -128,7 +128,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
           _ <- Future(warn(LogMsgMaker.newInstance("Account already exist").append("index", accountIndex).append("wallet_name", name).toString()))
           a <- coreW.getAccount(accountIndex).map { coreA =>
             startListen(coreA)
-            Account.newInstance(coreA, self)
+            coreA
           }
         } yield a
     }
@@ -136,7 +136,7 @@ class Wallet(private val coreW: core.Wallet, private val pool: Pool) extends Log
 
   def syncAccounts(poolName: String): Future[Seq[SynchronizationResult]] = {
     accounts().flatMap { accounts =>
-      Future.sequence(accounts.map { account => account.sync(poolName)})
+      Future.sequence(accounts.map { account => account.sync(poolName, coreW.getName)})
     }
   }
 

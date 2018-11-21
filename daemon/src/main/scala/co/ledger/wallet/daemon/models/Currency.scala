@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import scala.collection.JavaConverters._
 
 object Currency {
-  implicit class CoreCurrencyWrapper(val c: core.Currency) extends AnyVal {
+  implicit class RichCoreCurrency(val c: core.Currency) extends AnyVal {
     def concatSig(sig: Array[Byte]): Array[Byte] = Currency.concatSig(c)(sig)
     def parseUnsignedBTCTransaction(rawTx: Array[Byte], currentHeight: Long): Either[String, core.BitcoinLikeTransaction] = Currency.parseUnsignedBTCTransaction(c)(rawTx, currentHeight)
     def validateAddress(address: String): Boolean = Currency.validateAddress(c)(address)

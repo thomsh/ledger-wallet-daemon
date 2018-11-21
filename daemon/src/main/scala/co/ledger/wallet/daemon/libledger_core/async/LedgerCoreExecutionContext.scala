@@ -7,7 +7,7 @@ import co.ledger.wallet.daemon.async.{MDCPropagatingExecutionContext, SerialExec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LedgerCoreExecutionContext(val ec: ExecutionContext) extends co.ledger.core.ExecutionContext {
+class LedgerCoreExecutionContext(ec: ExecutionContext) extends co.ledger.core.ExecutionContext {
   private implicit val context = ec
 
   override def execute(runnable: core.Runnable): Unit = Future {runnable.run()}

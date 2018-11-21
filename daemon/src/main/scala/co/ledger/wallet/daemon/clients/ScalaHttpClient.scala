@@ -5,7 +5,6 @@ import java.net.{HttpURLConnection, URL}
 import java.util
 
 import co.ledger.core.{ErrorCode, HttpMethod, HttpReadBodyResult, HttpRequest}
-import co.ledger.wallet.daemon.utils.HexUtils
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import com.twitter.inject.Logging
 

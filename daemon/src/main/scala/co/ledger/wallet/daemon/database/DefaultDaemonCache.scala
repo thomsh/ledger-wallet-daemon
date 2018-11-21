@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.exceptions._
-import co.ledger.wallet.daemon.models.Account.{Account, Derivation}
+import co.ledger.wallet.daemon.models.Account._
 import co.ledger.wallet.daemon.models.Operations.{OperationView, PackedOperationsView}
 import co.ledger.wallet.daemon.models._
 import co.ledger.wallet.daemon.schedulers.observers.{NewOperationEventReceiver, SynchronizationResult}
@@ -14,7 +14,7 @@ import co.ledger.wallet.daemon.services.LogMsgMaker
 import com.twitter.inject.Logging
 import javax.inject.Singleton
 import slick.jdbc.JdbcBackend.Database
-import co.ledger.core.Currency
+import co.ledger.core.{Currency, Account}
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -45,7 +45,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
 
   override def syncOperations(pubKey: String, poolName: String, walletName: String, accountIndex: Int): Future[Seq[SynchronizationResult]] = {
     getAccount(accountIndex, pubKey, poolName, walletName).flatMap({
-      case Some(account) => account.sync(poolName).map(Seq(_))
+      case Some(account) => account.sync(poolName, walletName).map(Seq(_))
       case None => Future.failed(AccountNotFoundException(accountIndex))
     })
   }
@@ -61,7 +61,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   def getFreshAddresses(accountIndex: Int, user: User, poolName: String, walletName: String): Future[Seq[FreshAddressView]] = {
     for {
       (_, _, account) <- getHardAccount(user, poolName, walletName, accountIndex)
-      addrs <- account.freshAddresses()
+      addrs <- account.freshAddresses
     } yield addrs.map { add => FreshAddressView(add.toString, add.getDerivationPath) }
   }
 
@@ -174,7 +174,7 @@ class DefaultDaemonCache() extends DaemonCache with Logging {
   override def getNextExtendedAccountCreationInfo(pubKey: String,
                                                   poolName: String,
                                                   walletName: String,
-                                                  accountIndex: Option[Int]): Future[Account.ExtendedDerivation] = {
+                                                  accountIndex: Option[Int]): Future[ExtendedDerivation] = {
     getHardWallet(pubKey, poolName, walletName).flatMap(_.accountExtendedCreation(accountIndex))
   }
 
