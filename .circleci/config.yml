@@ -8,24 +8,14 @@ workflows:
     jobs:
       - docker/build_image:
           filters:
-            branches:
-              only:
-                - develop
-                - master
-                - /^pull\/.*$/
             tags:
               only: /v.*/
       - docker/test_image:
           requires:
             - docker/build_image
           filters:
-            branches:
-              only:
-                - develop
-                - master
-                - /^pull\/.*$/
             tags:
-              only: /.*/
+              only: /v.*/
       - docker/publish_image:
           requires:
             - docker/test_image
