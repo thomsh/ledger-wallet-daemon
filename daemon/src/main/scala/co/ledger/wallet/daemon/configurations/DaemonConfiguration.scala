@@ -19,6 +19,9 @@ object DaemonConfiguration {
   val apiConnection: (String, Int, Int) =
     (config.getString("api.host"), config.getInt("api.port"), config.getInt("api.connection_pool_size"))
 
+  val proxy: (Boolean, String, Int) =
+    (config.getBoolean("proxy.enabled"), config.getString("proxy.host"), config.getInt("proxy.port"))
+
   val adminUsers: Seq[(String, String)] = if (config.hasPath("demo_users")) {
     val usersConfig = config.getConfigList("demo_users").asScala
     for {

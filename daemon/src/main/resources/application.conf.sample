@@ -10,7 +10,13 @@ api = {
   host = "api.ledgerwallet.com"
   port = 80 // default
   connection_pool_size = 10
-}	
+}
+
+proxy = {
+  enabled = false
+  host = "myproxy.com"
+  port = 8080
+}
 
 h2mem1 = {
   url = "jdbc:h2:mem:test;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1"

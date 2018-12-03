@@ -1,7 +1,8 @@
 package co.ledger.wallet.daemon.clients
 
-import javax.inject.Singleton
+import java.net.InetSocketAddress
 
+import javax.inject.Singleton
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.models.FeeMethod
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.twitter.finagle.Http
 import co.ledger.wallet.daemon.utils.Utils._
+import com.twitter.finagle.client.Transporter
 import com.twitter.finagle.http.{Method, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,9 +28,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
   private[this] val (host, port, poolSize) = DaemonConfiguration.apiConnection
-  private [this] val client = Http.client
-    .withSessionPool.maxSize(poolSize)
-    .newService(s"$host:$port")
+  private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
+  private [this] val client = if(proxyEnabled) {
+    Http.client
+      .withSessionPool.maxSize(poolSize)
+      .configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
+      .newService(s"$host:$port")
+  } else {
+    Http.client
+      .withSessionPool.maxSize(poolSize)
+      .newService(s"$host:$port")
+  }
 
   //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {

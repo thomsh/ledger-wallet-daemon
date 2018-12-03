@@ -1,10 +1,11 @@
 package co.ledger.wallet.daemon.clients
 
 import java.io.{BufferedInputStream, DataOutputStream}
-import java.net.{HttpURLConnection, URL}
+import java.net.{HttpURLConnection, InetSocketAddress, URL}
 import java.util
 
 import co.ledger.core.{ErrorCode, HttpMethod, HttpReadBodyResult, HttpRequest}
+import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import com.twitter.inject.Logging
 
@@ -17,7 +18,13 @@ class ScalaHttpClient(implicit val ec: ExecutionContext) extends co.ledger.core.
 import ScalaHttpClient._
 
   override def execute(request: HttpRequest): Unit = Future {
-    val connection = new URL(request.getUrl).openConnection().asInstanceOf[HttpURLConnection]
+    val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
+    val connection = if(proxyEnabled) {
+      val proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort))
+      new URL(request.getUrl).openConnection(proxy).asInstanceOf[HttpURLConnection]
+    } else {
+      new URL(request.getUrl).openConnection().asInstanceOf[HttpURLConnection]
+    }
     connection.setRequestMethod(resolveMethod(request.getMethod))
     for ((key, value) <- request.getHeaders.asScala) {
        connection.setRequestProperty(key, value)
