@@ -2,6 +2,7 @@ database_engine = "sqlite3"
 
 sqlite3 = {
   url = "jdbc:sqlite:database.db"
+  url = ${?WALLET_JDBC_URL}
   driver = "org.sqlite.JDBC"
   connectionPool = disabled
 }
@@ -14,8 +15,11 @@ api = {
 
 proxy = {
   enabled = false
+  enabled = ${?WALLET_PROXY_ENABLED}
   host = "myproxy.com"
+  host = ${?WALLET_PROXY_HOST}
   port = 8080
+  port = ${?WALLET_PROXY_PORT}
 }
 
 h2mem1 = {
