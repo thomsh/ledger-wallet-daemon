@@ -62,6 +62,7 @@ class AccountsApiTest extends APIFeatureTest {
     assertCreateAccount(CORRECT_BODY, "fresh_addresses_pool", "account_wallet", Status.Ok)
     val addresses = parse[Seq[FreshAddressView]](assertGetFreshAddresses("fresh_addresses_pool", "account_wallet", index = 0, Status.Ok))
     assert(!addresses.isEmpty)
+    deletePool("fresh_addresses_pool")
   }
 
   test("AccountsApi#Get account(s) from non exist pool return bad request") {

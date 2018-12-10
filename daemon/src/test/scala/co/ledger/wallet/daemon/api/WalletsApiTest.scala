@@ -32,6 +32,7 @@ class WalletsApiTest extends APIFeatureTest {
     val notFoundErr = server.mapper.objectMapper.readValue[ErrorResponseBody](
       assertGetWallet(WALLET_POOL, "not_exist_wallet", Status.NotFound).contentString)
     assert(notFoundErr === ErrorResponseBody(ErrorCode.Not_Found, Map("response"->"Wallet doesn't exist","wallet_name"->"not_exist_wallet")))
+    deletePool(WALLET_POOL)
   }
 
   test("WalletsApi#Create already exist wallet Return Ok") {
@@ -70,6 +71,7 @@ class WalletsApiTest extends APIFeatureTest {
     createPool("empty_pool")
     val result = assertGetWallets("empty_pool", 0, 2, Status.Ok)
     assert(WalletsViewWithCount(0, Array[WalletView]()) === walletsFromResponse(result))
+    deletePool("empty_pool")
   }
 
   test("WalletsApi#Get/Post wallet(s) from non existing pool") {
