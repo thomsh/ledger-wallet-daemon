@@ -1,14 +1,15 @@
 ### BUILD STEP ###
-FROM openjdk:8u181 as builder
+FROM openjdk:8u181-jdk-stretch as builder
 ENV STAGE dev
 
 WORKDIR /build
 ADD . /build
+COPY ./docker/build_ledger_core.sh .
+RUN ./build_ledger_core.sh
 RUN ./docker/build.sh
 
 #### RUN STEP ###
-FROM debian:stretch-slim
-ENV JDK_DEBIAN_VERSION=8u181-b13-2~deb9u1
+FROM openjdk:8u181-jre-slim-stretch
 ENV HTTP_PORT 9200
 ENV ADMIN_PORT 0
 ENV STAGE dev
