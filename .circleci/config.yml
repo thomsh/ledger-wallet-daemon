@@ -21,6 +21,9 @@ workflows:
             - docker/test_image
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - develop
+                - release_candidate
             tags:
               only: /v.*/
