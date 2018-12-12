@@ -12,7 +12,7 @@ class WalletPoolsApiTest extends APIFeatureTest {
     createPool("my_pool")
     val pools = parse[List[models.WalletPoolView]](getPools())
     val pool = parse[models.WalletPoolView](getPool("my_pool"))
-    assert(pools == List(pool))
+    assert(pools.contains(pool))
     deletePool("my_pool")
   }
 
@@ -24,11 +24,11 @@ class WalletPoolsApiTest extends APIFeatureTest {
     createPool("this_pool")
     createPool("your_pool")
     val pools = parse[List[models.WalletPoolView]](getPools())
-    assert(pools == List(WalletPoolView("your_pool", 0), WalletPoolView("this_pool", 0)))
+    List(WalletPoolView("your_pool", 0), WalletPoolView("this_pool", 0)).map { pool => assert(pools.contains(pool))}
     deletePool("your_pool")
     deletePool("this_pool")
     val pools2 = parse[List[models.WalletPoolView]](getPools())
-    assert(pools2.size == 0)
+    List(WalletPoolView("your_pool", 0), WalletPoolView("this_pool", 0)).map { pool => assert(!pools2.contains(pool))}
   }
 
   test("WalletPoolsApi#Get single pool") {
