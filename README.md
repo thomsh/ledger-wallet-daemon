@@ -5,24 +5,44 @@
 
 When a new version of the libcore is available, we need to update our bindings.
 
-1. Build the libcore, both for linux and osx. The instructions to do so are available
-on the [libcore repo](https://github.com/LedgerHQ/lib-ledger-core/).
-FYI, here's what it looks like as of writing this readme:
+Prerequisites: `docker` and `sbt` installed
 
-```bash
-# cd to the parent directory of the wallet-daemon
-git clone --recurse-submodules https://github.com/LedgerHQ/lib-ledger-core.git
-mkdir lib-ledger-core-build
-cd lib-ledger-core-build
-cmake -DBUILD_TESTS=OFF -DTARGET_JNI=ON ../lib-ledger-core && make
-```
+1. Check out [lib core project](https://github.com/LedgerHQ/lib-ledger-core)
+   ```bash
+   git clone --recurse-submodules https://github   .com/LedgerHQ/lib-ledger-core
+   ```
 
-2. Do the above step for both linux (on the beta machine as user `ledger`) and on a mac.
+2. Copy `build-jar.sh` and `build-jar-linux.sh` to the lib core project folder
+   ```bash
+   cp $WALLET_DAEMON_FOLDER/build-jar.sh $LIB_CORE_FOLDER
+   cp $WALLET_DAEMON_FOLDER/build-jar-linux.sh $LIB_CORE_FOLDER
+   ```
 
-3. Copy both .so and .dylib files to `lib-ledger-core-build/core/src` on your personal
-machine.
+3. `cd` to lib core folder
+   ```bash
+   cd $LIB_CORE_FOLDER
+   ```
 
-4. From the directory of the wallet-daemon, run `./package_libcore.sh`
+4. Run the script `build-jar.sh` with command: `mac`, `linux` or `all`.
+   MacOS can build both `mac` and `linux`. Linux can only build `linux`.
+   ```bash
+   # Build for both mac only. You may want to do this when developing, 
+   # it's much faster than build for both mac and linux
+   bash buid-jar.sh mac
+
+   # Build for linux. Linux build is using docker.
+   bash buid-jar.sh all
+
+   # Build for both mac and linux
+   bash buid-jar.sh all
+
+   ```
+
+5. After the build, you find the jar file in `$LIB_CORE_FOLDER/../build-jar/target/scala-<version>/build-jar-<version>.jar`.
+   Replace the `ledger-lib-core.jar` in the lib folder with this file.
+   ```bash
+   mv $LIB_CORE_FOLDER/../build-jar/target/scala-<version>/build-jar-<version>.jar $WALLET_DAEMON_FOLDER/lib/ledger-lib-core.jar
+   ```
 
 5. Push the changes to upstream
 
