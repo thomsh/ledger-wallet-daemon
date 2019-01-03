@@ -65,7 +65,7 @@ object EthereumTransactionView {
         val data = HexUtils.valueOf(byteArray).toLowerCase()
         data match {
           case erc20(receiver, amount) =>
-            Right(ERC20(receiver, amount.toLong))
+            Right(ERC20(receiver, BigDecimal.apply(amount).toLongExact))
           case _ => Left(s"bad erc20 data format: $data")
         }
       } else Left("bad erc20 data size")

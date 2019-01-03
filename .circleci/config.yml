@@ -25,6 +25,5 @@ workflows:
                 - master
                 - develop
                 - release_candidate
-                - develop_eth_erc20
             tags:
               only: /v.*/
