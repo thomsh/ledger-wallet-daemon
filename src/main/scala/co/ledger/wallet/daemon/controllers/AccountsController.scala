@@ -28,28 +28,20 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
   import AccountsController._
 
   prefix("/pools/:pool_name/wallets/:wallet_name") {
-    /**
-      * End point queries for account views with specified pool name and wallet name.
-      *
-      */
+
+    // End point queries for account views with specified pool name and wallet name.
     get("/accounts") { request: AccountsRequest =>
       info(s"GET accounts $request")
       accountsService.accounts(request.walletInfo)
     }
 
-    /**
-      * End point queries for derivation information view of next account creation.
-      *
-      */
+    // End point queries for derivation information view of next account creation.
     get("/accounts/next") { request: AccountCreationInfoRequest =>
       info(s"GET account creation info $request")
       accountsService.nextAccountCreationInfo(request.account_index, request.walletInfo)
     }
 
-    /**
-      * End point to create a new account within the specified pool and wallet.
-      *
-      */
+    // End point to create a new account within the specified pool and wallet.
     filter[AccountCreationFilter]
       .post("/accounts") { request: AccountsRequest =>
         info(s"CREATE account $request, " +
@@ -58,10 +50,7 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         accountsService.createAccount(request.request.accountCreationBody, request.walletInfo)
       }
 
-    /**
-      * End point to create a new account within the specified pool and wallet with extended keys info.
-      *
-      */
+    // End point to create a new account within the specified pool and wallet with extended keys info.
     filter[AccountExtendedCreationFilter]
       .post("/accounts/extended") { request: AccountsRequest =>
         info(s"CREATE account ${request.request}, " +
@@ -70,20 +59,13 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         accountsService.createAccountWithExtendedInfo(request.request.accountExtendedCreationBody, request.walletInfo)
       }
 
-    /**
-      * End point queries for derivation information view of next account creation (with extended key).
-      *
-      */
+    // End point queries for derivation information view of next account creation (with extended key).
     get("/accounts/next_extended") { request: AccountCreationInfoRequest =>
       info(s"GET account creation info $request")
       accountsService.nextExtendedAccountCreationInfo(request.account_index, request.walletInfo)
     }
 
-    /**
-      * End point queries for account view with specified pool, wallet name, and unique account index.
-      *
-      */
-
+    // End point queries for account view with specified pool, wallet name, and unique account index.
     prefix("/accounts/:account_index") {
 
       get("") { request: AccountRequest =>
@@ -102,28 +84,20 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         }
       }
 
-      /**
-        * End point queries for fresh addresses with specified pool, wallet name and unique account index.
-        *
-        */
+      // End point queries for fresh addresses with specified pool, wallet name and unique account index.
       get("/addresses/fresh") { request: AccountRequest =>
         info(s"GET fresh addresses $request")
         accountsService.accountFreshAddresses(request.accountInfo)
       }
 
-      /**
-        * End point queries for derivation path with specified pool, wallet name and unique account index.
-        *
-        */
+
+      // End point queries for derivation path with specified pool, wallet name and unique account index.
       get("/path") { request: AccountRequest =>
         info(s"GET account derivation path $request")
         accountsService.accountDerivationPath(request.accountInfo)
       }
 
-      /**
-        * End point queries for operation views with specified pool, wallet name, and unique account index.
-        *
-        */
+      // End point queries for operation views with specified pool, wallet name, and unique account index.
       get("/operations") { request: OperationsRequest =>
         info(s"GET account operations $request")
         request.contract match {
@@ -134,19 +108,13 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         }
       }
 
-      /**
-        * End point queries for account balance
-        *
-        */
+      // End point queries for account balance
       get("/balance") { request: BalanceRequest =>
         info(s"GET account balance $request")
         accountsService.getBalance(request.contract, request.accountInfo)
       }
 
-      /**
-        * End point queries for operation view with specified uid, return the first operation of this account if uid is 'first'.
-        *
-        */
+      // End point queries for operation view with specified uid, return the first operation of this account if uid is 'first'.
       get("/operations/:uid") { request: OperationRequest =>
         info(s"GET account operation $request")
         request.uid match {
@@ -163,10 +131,7 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         }
       }
 
-      /**
-        * Return the balances and operation counts history in the order of the starting time to the end time.
-        *
-        */
+      // Return the balances and operation counts history in the order of the starting time to the end time.
       get("/history") { request: HistoryRequest =>
         info(s"Get history $request")
         for {
@@ -177,37 +142,27 @@ class AccountsController @Inject()(accountsService: AccountsService) extends Con
         } yield HistoryResponse(balances, operationCounts)
       }
 
-      /**
-        * Synchronize a single account
-        */
+      // Synchronize a single account
       post("/operations/synchronize") { request: AccountRequest =>
         accountsService.synchronizeAccount(request.accountInfo)
       }
 
-      /**
-        * List of tokens on this account
-        */
+      // List of tokens on this account
       get("/tokens") { request: AccountRequest =>
         accountsService.getTokenAccounts(request.accountInfo)
       }
 
-      /**
-        * operations of all tokens on this account
-        */
+      // operations of all tokens on this account
       get("/tokens/operations") { request: AccountRequest =>
         accountsService.getERC20Operations(request.accountInfo)
       }
 
-      /**
-        * given token address, get the token on this account
-        */
+      // given token address, get the token on this account
       get("/tokens/:token_address") { request: TokenAccountRequest =>
         accountsService.getTokenAccount(request.tokenAccountInfo)
       }
 
-      /**
-        * given token address, get the operations on this token
-        */
+      // given token address, get the operations on this token
       get("/tokens/:token_address/operations") { request: TokenAccountRequest =>
         accountsService.getERC20Operations(request.tokenAccountInfo)
       }
@@ -221,7 +176,7 @@ object AccountsController {
   private val DEFAULT_OPERATION_MODE: Int = 0
 
 
-  abstract class BaseAccountRequest(request: Request) extends RequestWithUser with WithWalletInfo {
+  abstract class BaseAccountRequest extends RequestWithUser with WithWalletInfo {
     val pool_name: String
     val wallet_name: String
 
@@ -232,7 +187,7 @@ object AccountsController {
     def validateWalletName: ValidationResult = CommonMethodValidations.validateName("wallet_name", wallet_name)
   }
 
-  abstract class BaseSingleAccountRequest(request: Request) extends BaseAccountRequest(request) with WithAccountInfo {
+  abstract class BaseSingleAccountRequest extends BaseAccountRequest with WithAccountInfo {
     val account_index: Int
 
     @MethodValidation
@@ -247,7 +202,7 @@ object AccountsController {
                              @RouteParam override val account_index: Int,
                              @QueryParam start: String, @QueryParam end: String, @QueryParam timeInterval: String,
                              request: Request
-                           ) extends BaseSingleAccountRequest(request) {
+                           ) extends BaseSingleAccountRequest {
 
     def timePeriod: TimePeriod = TimePeriod.valueOf(timeInterval)
 
@@ -266,13 +221,13 @@ object AccountsController {
                              @RouteParam override val pool_name: String,
                              @RouteParam override val wallet_name: String,
                              @RouteParam override val account_index: Int,
-                             request: Request) extends BaseSingleAccountRequest(request)
+                             request: Request) extends BaseSingleAccountRequest
 
   case class AccountsRequest(
                               @RouteParam override val pool_name: String,
                               @RouteParam override val wallet_name: String,
                               request: Request
-                            ) extends BaseAccountRequest(request)
+                            ) extends BaseAccountRequest
 
   case class TokenAccountRequest(
                                   @RouteParam pool_name: String,
@@ -281,7 +236,7 @@ object AccountsController {
                                   @RouteParam token_address: String,
                                   request: Request
                                 )
-    extends BaseSingleAccountRequest(request) with WithTokenAccountInfo
+    extends BaseSingleAccountRequest with WithTokenAccountInfo
 
   case class AccountCreationInfoRequest(
                                          @RouteParam pool_name: String,
@@ -309,7 +264,7 @@ object AccountsController {
                                 @QueryParam full_op: Int = DEFAULT_OPERATION_MODE,
                                 @QueryParam contract: Option[String],
                                 request: Request
-                              ) extends BaseSingleAccountRequest(request) {
+                              ) extends BaseSingleAccountRequest {
 
     @MethodValidation
     def validateBatch: ValidationResult = ValidationResult.validate(batch > 0, "batch: batch should be greater than zero")
@@ -323,7 +278,7 @@ object AccountsController {
                              // TODO find better way to handle ERC20 contract
                              @QueryParam contract: Option[String],
                              request: Request
-                           ) extends BaseSingleAccountRequest(request)
+                           ) extends BaseSingleAccountRequest
 
   case class OperationRequest(
                                @RouteParam override val pool_name: String,
@@ -332,6 +287,6 @@ object AccountsController {
                                @RouteParam uid: String,
                                @QueryParam full_op: Int = 0,
                                request: Request
-                             ) extends BaseSingleAccountRequest(request)
+                             ) extends BaseSingleAccountRequest
 
 }

@@ -22,5 +22,5 @@ class ECDSAService extends DaemonService {
 
   private def lease: Lease[Secp256k1] = _secp256k1Instances.acquire()
 
-  private lazy val _secp256k1Instances: Pool[Secp256k1] = Pool[Secp256k1](Runtime.getRuntime.availableProcessors(), Secp256k1.newInstance)
+  private lazy val _secp256k1Instances: Pool[Secp256k1] = Pool[Secp256k1](Runtime.getRuntime.availableProcessors(), () => Secp256k1.newInstance())
 }

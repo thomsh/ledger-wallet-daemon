@@ -6,6 +6,7 @@ import co.ledger.core.TimePeriod
 import co.ledger.wallet.daemon.models.{AccountDerivationView, AccountView, FreshAddressView}
 import co.ledger.wallet.daemon.services.OperationQueryParams
 import co.ledger.wallet.daemon.utils.APIFeatureTest
+import com.fasterxml.jackson.databind.JsonNode
 import com.twitter.finagle.http.{Response, Status}
 
 class AccountsApiTest extends APIFeatureTest {
@@ -61,7 +62,7 @@ class AccountsApiTest extends APIFeatureTest {
     assertWalletCreation("fresh_addresses_pool", "account_wallet", "bitcoin", Status.Ok)
     assertCreateAccount(CORRECT_BODY, "fresh_addresses_pool", "account_wallet", Status.Ok)
     val addresses = parse[Seq[FreshAddressView]](assertGetFreshAddresses("fresh_addresses_pool", "account_wallet", index = 0, Status.Ok))
-    assert(!addresses.isEmpty)
+    assert(addresses.nonEmpty)
     deletePool("fresh_addresses_pool")
   }
 
@@ -131,9 +132,9 @@ class AccountsApiTest extends APIFeatureTest {
 
   test("AccountsApi#Get account operations") {
 
-    def getUUID(field: String, content: Map[String, Any]): Option[UUID] = {
-      val idStr = content.get(field).asInstanceOf[Option[String]]
-      idStr.map(UUID.fromString(_))
+    def getUUID(field: String, content: Map[String, JsonNode]): Option[UUID] = {
+      val idStr = content.get(field).map(_.asText())
+      idStr.map(UUID.fromString)
     }
 
     createPool("op_pool")
@@ -145,19 +146,20 @@ class AccountsApiTest extends APIFeatureTest {
     val response = assertGetFirstOperation(0,"op_pool", "op_wallet", Status.Ok).contentString
     assert(response.contains("ed977add08cfc6cd158e65150bcd646d7a52b60f84e15e424b617d5511aaed21"))
 
-    val firstBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, None, 2, 0), Status.Ok))
 
-    val secondBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", firstBtch), 10, 0), Status.Ok))
+    val firstBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, None, 2, 0), Status.Ok))
 
-    val previousOf2ndBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(getUUID("previous", secondBtch), None, 10, 0), Status.Ok))
+    val secondBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", firstBtch), 10, 0), Status.Ok))
+
+    val previousOf2ndBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(getUUID("previous", secondBtch), None, 10, 0), Status.Ok))
     assert(firstBtch.get("next") === previousOf2ndBtch.get("next"))
     assert(firstBtch.get("previous") === previousOf2ndBtch.get("previous"))
 
-    val thirdBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", secondBtch), 5, 0), Status.Ok))
+    val thirdBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", secondBtch), 5, 0), Status.Ok))
 
-    val fourthBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", thirdBtch), 10, 0), Status.Ok))
+    val fourthBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(None, getUUID("next", thirdBtch), 10, 0), Status.Ok))
 
-    val previousOf4thBtch = parse[Map[String, Any]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(getUUID("previous", fourthBtch), None, 10, 1), Status.Ok))
+    val previousOf4thBtch = parse[Map[String, JsonNode]](assertGetAccountOps("op_pool", "op_wallet", 0, OperationQueryParams(getUUID("previous", fourthBtch), None, 10, 1), Status.Ok))
     assert(thirdBtch.get("next") === previousOf4thBtch.get("next"))
     assert(thirdBtch.get("previous") === previousOf4thBtch.get("previous"))
     deletePool("op_pool")
@@ -194,8 +196,6 @@ class AccountsApiTest extends APIFeatureTest {
       sb.append("next=" + n.toString + "&")
     }
     sb.append(s"batch=${params.batch}&full_op=${params.fullOp}")
-    val previous = params.previous.orNull
-    val next = params.next.orNull
     server.httpGet(sb.toString(), headers = defaultHeaders, andExpect = expected)
   }
 

@@ -6,7 +6,7 @@ import co.ledger.core
 import co.ledger.core.implicits._
 import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.models.coins.Coin._
-import co.ledger.wallet.daemon.utils.{HexUtils, Utils}
+import co.ledger.wallet.daemon.utils.HexUtils
 import com.fasterxml.jackson.annotation.JsonProperty
 
 import scala.collection.JavaConverters._
@@ -89,8 +89,8 @@ object Bitcoin {
   }
 
   private def newInputView(from: core.BitcoinLikeInput): InputView = {
-
-    BitcoinInputView(from.getAddress, from.getValue.toLong, Option(from.getCoinbase), Option(from.getPreviousTxHash), Option(from.getPreviousOutputIndex))
+    val previousIndex: Int = from.getPreviousOutputIndex
+    BitcoinInputView(from.getAddress, from.getValue.toLong, Option(from.getCoinbase), Option(from.getPreviousTxHash), Option(previousIndex))
   }
 
   private def newOutputView(from: core.BitcoinLikeOutput): OutputView = {

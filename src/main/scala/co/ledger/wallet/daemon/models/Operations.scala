@@ -30,6 +30,7 @@ object Operations {
   }
 
   def getView(operation: core.Operation, wallet: core.Wallet, account: core.Account): Future[OperationView] = {
+    val height: Long = operation.getBlockHeight
     for {
       confirms <- confirmations(operation, wallet)
       curFamily = operation.getWalletType
@@ -40,7 +41,7 @@ object Operations {
       Option(operation.getTrust).map(getTrustIndicatorView),
       confirms,
       operation.getDate,
-      Option(operation.getBlockHeight),
+      Option(height),
       operation.getOperationType,
       operation.getAmount.toLong,
       operation.getFees.toLong,

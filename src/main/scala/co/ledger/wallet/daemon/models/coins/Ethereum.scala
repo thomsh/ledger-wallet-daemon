@@ -3,10 +3,10 @@ package co.ledger.wallet.daemon.models.coins
 import java.util.Date
 
 import co.ledger.core._
-import co.ledger.wallet.daemon.models.coins.Coin.{BlockView, NetworkParamsView, TransactionView}
+import co.ledger.wallet.daemon.models.coins.Coin.{NetworkParamsView, TransactionView}
 import co.ledger.wallet.daemon.utils.HexUtils
-import com.fasterxml.jackson.annotation.JsonProperty
 import co.ledger.wallet.daemon.utils.Utils.RichBigInt
+import com.fasterxml.jackson.annotation.JsonProperty
 
 import scala.collection.JavaConverters._
 

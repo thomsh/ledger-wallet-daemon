@@ -16,7 +16,7 @@ class DaemonExceptionMapper @Inject()(response: ResponseBuilder)
         ResponseSerializer.serializeBadRequest(
           Map("response" -> "Account doesn't exist", "account_index" -> anfe.accountIndex),
           response)
-      case onfe: OperationNotFoundException =>
+      case _: OperationNotFoundException =>
         val next = request.getParam("next")
         val previous = request.getParam("previous")
         ResponseSerializer.serializeBadRequest(

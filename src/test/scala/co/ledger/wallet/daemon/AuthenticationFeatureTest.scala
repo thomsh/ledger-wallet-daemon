@@ -29,18 +29,6 @@ class AuthenticationFeatureTest extends FeatureTest {
     "authorization" -> s"Basic ${Base64.getEncoder.encodeToString(s"$username:$password".getBytes(StandardCharsets.UTF_8))}"
   )
 
-  private def invalidLWDAuthorisationHeader(seedName: String) = {
-    val ecdsa = server.injector.instance(classOf[ECDSAService])
-    val privKey = Sha256Hash.hash(FixturesUtils.seed(seedName).getBytes)
-    val pubKey = ecdsa.computePublicKey(privKey)
-    val timestamp = new Date().getTime / 1000
-    val message = Sha256Hash.hash(s"LWD: $timestamp\n".getBytes)
-    val signed = ecdsa.sign(message, privKey)
-    Map(
-      "authorization" -> s"LW ${Base64.getEncoder.encodeToString(s"${HexUtils.valueOf(pubKey)}:$timestamp:${HexUtils.valueOf(signed)}".getBytes(StandardCharsets.UTF_8))}"
-    )
-  }
-
   private def lwdBasicAuthorisationHeader(seedName: String, time: Date = new Date()) = {
     val ecdsa = server.injector.instance(classOf[ECDSAService])
     val privKey = Sha256Hash.hash(FixturesUtils.seed(seedName).getBytes)

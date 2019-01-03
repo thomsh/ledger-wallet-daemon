@@ -21,7 +21,7 @@ object Deserializers {
   class WalletDeserializer extends JsonDeserializer[WalletView] {
 
     override def deserialize(jp: JsonParser, ctxt: DeserializationContext): WalletView = {
-      val node: JsonNode = jp.getCodec.readTree(jp)
+      val node: JsonNode = jp.getCodec.readTree[JsonNode](jp)
       val name = node.get("name").asText()
       val accountCount = node.get("account_count").asInt()
       val balance = node.get("balance").asLong()
@@ -40,7 +40,7 @@ object Deserializers {
   class CurrencyDeserializer extends JsonDeserializer[CurrencyView] {
 
     override def deserialize(jp: JsonParser, ctxt: DeserializationContext): CurrencyView = {
-      val node: JsonNode = jp.getCodec.readTree(jp)
+      val node: JsonNode = jp.getCodec.readTree[JsonNode](jp)
       val name = node.get("name").asText()
       val family = core.WalletType.valueOf(node.get("family").asText())
       val bip44CoinType = node.get("bip_44_coin_type").asInt()

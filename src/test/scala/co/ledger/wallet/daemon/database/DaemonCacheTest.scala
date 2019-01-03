@@ -36,7 +36,7 @@ class DaemonCacheTest extends AssertionsForJUnit {
       Await.result(cache.getWalletPools(UUID.randomUUID().toString), Duration.Inf)
       fail()
     } catch {
-      case e: UserNotFoundException => // expected
+      case _: UserNotFoundException => // expected
     }
   }
 

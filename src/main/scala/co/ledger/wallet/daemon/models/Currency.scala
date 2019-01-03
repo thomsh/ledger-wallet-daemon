@@ -53,6 +53,7 @@ object Currency {
   private def newNetworkParamsView(coreCurrency: core.Currency): NetworkParamsView = coreCurrency.getWalletType match {
     case core.WalletType.BITCOIN => Bitcoin.newNetworkParamsView(coreCurrency.getBitcoinLikeNetworkParameters)
     case core.WalletType.ETHEREUM => EthereumNetworkParamView(coreCurrency.getEthereumLikeNetworkParameters)
+    case _ => throw new UnsupportedOperationException
   }
 }
 

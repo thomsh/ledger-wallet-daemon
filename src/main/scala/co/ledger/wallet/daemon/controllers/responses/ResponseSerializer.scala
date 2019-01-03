@@ -8,19 +8,19 @@ object ResponseSerializer extends Logging {
 
   def serializeInternalError(response: ResponseBuilder, caught: Throwable): Response = {
     error(ErrorCode.Internal_Error, caught)
-    response.internalServerError()
+    response.internalServerError
       .body(ErrorResponseBody(ErrorCode.Internal_Error, Map("response"->"Problem occurred when processing the request, check with developers")))
   }
 
   def serializeBadRequest(msg: Map[String, Any], response: ResponseBuilder): Response = {
     info(ErrorCode.Bad_Request)
-    response.badRequest()
+    response.badRequest
       .body(ErrorResponseBody(ErrorCode.Bad_Request, msg))
   }
 
   def serializeNotFound(msg: Map[String, Any], response: ResponseBuilder): Response = {
     info(ErrorCode.Not_Found)
-    response.notFound()
+    response.notFound
       .body(ErrorResponseBody(ErrorCode.Not_Found, msg))
   }
 

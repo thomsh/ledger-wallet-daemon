@@ -16,7 +16,6 @@ import com.twitter.inject.Logging
 import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
 
 object Wallet extends Logging {
 

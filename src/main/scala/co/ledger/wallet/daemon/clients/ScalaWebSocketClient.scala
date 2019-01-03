@@ -3,13 +3,13 @@ package co.ledger.wallet.daemon.clients
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
-import javax.annotation.Nullable
-import javax.annotation.concurrent.ThreadSafe
-import javax.websocket.{ClientEndpoint, ContainerProvider, OnMessage, Session}
 
 import co.ledger.core.{ErrorCode, WebSocketConnection}
 import co.ledger.wallet.daemon.services.LogMsgMaker
 import com.twitter.inject.Logging
+import javax.annotation.Nullable
+import javax.annotation.concurrent.ThreadSafe
+import javax.websocket.{ClientEndpoint, ContainerProvider, Session}
 
 @ThreadSafe
 @ClientEndpoint
@@ -43,11 +43,6 @@ class ScalaWebSocketClient extends co.ledger.core.WebSocketClient with Logging{
           connection.onError(ErrorCode.HTTP_ERROR, e.getMessage)
       }
     }
-  }
-
-  @OnMessage
-  def processMessage(message: String, session: Session): Unit = { // linter:ignore
-
   }
 
   override def send(connection: WebSocketConnection, data: String): Unit = {

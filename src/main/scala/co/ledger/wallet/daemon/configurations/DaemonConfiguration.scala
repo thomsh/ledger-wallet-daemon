@@ -2,7 +2,6 @@ package co.ledger.wallet.daemon.configurations
 
 import java.util.Locale
 
-import co.ledger.core.{ConfigurationDefaults, WalletType}
 import com.typesafe.config.ConfigFactory
 import slick.jdbc.JdbcProfile
 
@@ -33,7 +32,7 @@ object DaemonConfiguration {
 
   val whiteListUsers: Seq[(String, Int)] = if (config.hasPath("whitelist")){
     val usersConfig = config.getConfigList("whitelist")
-    var users = new ListBuffer[(String, Int)]()
+    val users = new ListBuffer[(String, Int)]()
     for (i <- 0 until usersConfig.size()) {
       val userConfig = usersConfig.get(i)
       val pubKey = userConfig.getString("key").toUpperCase(Locale.US)

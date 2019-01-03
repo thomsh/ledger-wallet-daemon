@@ -1,8 +1,5 @@
 package co.ledger.wallet.daemon.async
 
-import java.util.concurrent.Executors
-
-import com.twitter.concurrent.NamedPoolThreadFactory
 import org.slf4j.MDC
 
 import scala.concurrent.ExecutionContext

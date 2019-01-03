@@ -24,7 +24,6 @@ class CurrenciesController @Inject()(currenciesService: CurrenciesService) exten
     *
     */
   get("/pools/:pool_name/currencies/:currency_name") { request: GetCurrencyRequest =>
-    val poolName = request.pool_name
     val currencyName = request.currency_name
     info(s"GET currency $request")
     currenciesService.currency(currencyName, request.poolInfo).map {
@@ -39,7 +38,6 @@ class CurrenciesController @Inject()(currenciesService: CurrenciesService) exten
     *
     */
   get("/pools/:pool_name/currencies") { request: GetCurrenciesRequest =>
-    val poolName = request.pool_name
     info(s"GET currencies $request")
     currenciesService.currencies(request.poolInfo)
   }

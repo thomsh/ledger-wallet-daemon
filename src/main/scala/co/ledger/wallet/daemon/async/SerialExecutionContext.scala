@@ -1,9 +1,5 @@
 package co.ledger.wallet.daemon.async
 
-import java.util.concurrent.Executors
-
-import com.twitter.concurrent.NamedPoolThreadFactory
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object SerialExecutionContext {
@@ -14,7 +10,7 @@ object SerialExecutionContext {
 }
 
 class SerialExecutionContextWrapper(implicit val ec: ExecutionContext) extends ExecutionContext with MDCPropagatingExecutionContext {
-  private var _lastTask = Future.successful[Unit]()
+  private var _lastTask: Future[Unit] = Future.unit
 
   override def execute(runnable: Runnable): Unit = synchronized {
     _lastTask = _lastTask.map(_ => runnable.run())

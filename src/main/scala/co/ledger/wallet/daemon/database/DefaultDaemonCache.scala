@@ -154,7 +154,7 @@ object DefaultDaemonCache extends Logging {
 
     private def clearCache(poolName: String): Future[Unit] = cachedPools.remove(poolName) match {
       case Some(p) => p.clear
-      case None => Future.successful()
+      case None => Future.unit
     }
 
     def addPoolIfNotExit(name: String, configuration: String): Future[Pool] = {

@@ -12,7 +12,7 @@ object Utils {
 
   /** Convert from a Twitter Future to a Scala Future */
   implicit class RichTwitterFuture[A](val tf: TwitterFuture[A]) extends AnyVal {
-    def asScala()(implicit e: ExecutionContext): ScalaFuture[A] = {
+    def asScala(): ScalaFuture[A] = {
       val promise: ScalaPromise[A] = ScalaPromise()
       tf.respond {
         case Return(value) => promise.success(value)

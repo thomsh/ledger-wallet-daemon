@@ -8,7 +8,6 @@ import scala.concurrent.ExecutionContext
 class ScalaThreadDispatcher(mainContext: ExecutionContext) extends ThreadDispatcher {
   private val _mainContext = LedgerCoreExecutionContext(mainContext)
   private val _pools = mutable.Map[String, co.ledger.core.ExecutionContext]()
-  private val _queues = mutable.Map[String, co.ledger.core.ExecutionContext]()
 
   override def getSerialExecutionContext(name: String): co.ledger.core.ExecutionContext = synchronized {
     _pools.getOrElseUpdate(name, LedgerCoreExecutionContext.newSerialQueue())

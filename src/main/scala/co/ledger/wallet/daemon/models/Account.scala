@@ -59,7 +59,7 @@ object Account extends Logging {
     def accountView(walletName: String, cv: CurrencyView)(implicit ec: ExecutionContext): Future[AccountView] =
       Account.accountView(walletName, cv, a)
 
-    def broadcastBTCTransaction(rawTx: Array[Byte], signatures: Seq[BTCSigPub], currentHeight: Long, c: core.Currency)(implicit ec: ExecutionContext): Future[String] =
+    def broadcastBTCTransaction(rawTx: Array[Byte], signatures: Seq[BTCSigPub], currentHeight: Long, c: core.Currency): Future[String] =
       Account.broadcastBTCTransaction(rawTx, signatures, currentHeight, a, c)
 
     def broadcastETHTransaction(rawTx: Array[Byte], signatures: ETHSignature, c: core.Currency)(implicit ec: ExecutionContext): Future[String] =
@@ -136,7 +136,7 @@ object Account extends Logging {
       opsCount <- operationCounts(a)
     } yield AccountView(walletName, a.getIndex, b, opsCount, a.getRestoreKey, cv)
 
-  def broadcastBTCTransaction(rawTx: Array[Byte], signatures: Seq[BTCSigPub], currentHeight: Long, a: core.Account, c: core.Currency)(implicit ec: ExecutionContext): Future[String] = {
+  def broadcastBTCTransaction(rawTx: Array[Byte], signatures: Seq[BTCSigPub], currentHeight: Long, a: core.Account, c: core.Currency): Future[String] = {
     c.parseUnsignedBTCTransaction(rawTx, currentHeight) match {
       case Right(tx) =>
         if (tx.getInputs.size != signatures.size) Future.failed(SignatureSizeUnmatchException(tx.getInputs.size(), signatures.size))

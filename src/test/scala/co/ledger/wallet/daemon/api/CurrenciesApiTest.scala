@@ -69,19 +69,19 @@ class CurrenciesApiTest extends APIFeatureTest {
   private val CURRENCY_BTC = "bitcoin"
   private val CURRENCY_NON_EXIST = "currency_non_exist"
   private val CURRENCY_NON_EXIST_POOL = "non_exist_pool"
-  private val EXPECTED_BTC_TESTNET = CurrencyView(
-    "bitcoin_testnet",
-    core.WalletType.BITCOIN,
-    1,
-    "bitcoin",
-    List(
-      UnitView("testnet satoshi","satoshi","satoshi",0),
-      UnitView("testnet bitcoin", "BTC", "BTC", 8),
-      UnitView("testnet milli-bitcoin","mBTC", "mBTC", 5),
-      UnitView("testnet micro-bitcoin", "μBTC", "μBTC", 2),
-    ),
-    BitcoinNetworkParamsView("btc_testnet", "6F", "C4", "043587CF", "PER_BYTE", 546, "Bitcoin signed message:\n", false)
-  )
+//  private val EXPECTED_BTC_TESTNET = CurrencyView(
+//    "bitcoin_testnet",
+//    core.WalletType.BITCOIN,
+//    1,
+//    "bitcoin",
+//    List(
+//      UnitView("testnet satoshi","satoshi","satoshi",0),
+//      UnitView("testnet bitcoin", "BTC", "BTC", 8),
+//      UnitView("testnet milli-bitcoin","mBTC", "mBTC", 5),
+//      UnitView("testnet micro-bitcoin", "μBTC", "μBTC", 2),
+//    ),
+//    BitcoinNetworkParamsView("btc_testnet", "6F", "C4", "043587CF", "PER_BYTE", 546, "Bitcoin signed message:\n", false)
+//  )
   private val EXPECTED_BTC_CURRENCY = CurrencyView(
     "bitcoin",
     core.WalletType.BITCOIN,

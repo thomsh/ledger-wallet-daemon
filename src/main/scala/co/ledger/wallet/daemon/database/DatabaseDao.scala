@@ -34,7 +34,7 @@ class DatabaseDao @Inject()(db: Database) extends Logging {
         def migrate(version: Int, maxVersion: Int): Future[Unit] = {
           if(version > maxVersion) {
             info(s"Database version up to date at $maxVersion")
-            Future.successful()
+            Future.unit
           } else {
             info(s"Migrating version $version / $maxVersion")
             val rollbackMigrate = DBIO.seq(Migrations(version), insertDatabaseVersion(version))

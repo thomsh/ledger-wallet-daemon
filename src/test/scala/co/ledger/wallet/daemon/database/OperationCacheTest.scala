@@ -24,7 +24,7 @@ class OperationCacheTest extends AssertionsForJUnit {
     val previous = Option(UUID.randomUUID())
     val next = Option(UUID.randomUUID())
     val id = UUID.randomUUID()
-    val record = operationCache.insertOperation(id, 1L, "myWallet", 1, 0, 20, next, previous)
+    operationCache.insertOperation(id, 1L, "myWallet", 1, 0, 20, next, previous)
     val nextRecord = operationCache.getOperationCandidate(next.get)
     val insertedNext = insertRecord(nextRecord)
     assert(insertedNext != nextRecord)
@@ -66,7 +66,7 @@ class OperationCacheTest extends AssertionsForJUnit {
       operationCache.getPreviousOperationRecord(next.get)
       fail()
     } catch {
-      case e: OperationNotFoundException => // expected
+      case _: OperationNotFoundException => // expected
     }
   }
 
