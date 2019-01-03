@@ -55,7 +55,7 @@ object EthereumTransactionView {
     )
   }
 
-  case class ERC20(receiver: String, amount: Long)
+  case class ERC20(receiver: String, amount: scala.BigInt)
 
   object ERC20 {
     private val erc20 = raw"a9059cbb0{24}([0-9a-f]{40})([0-9a-f]{64})".r
@@ -65,7 +65,7 @@ object EthereumTransactionView {
         val data = HexUtils.valueOf(byteArray).toLowerCase()
         data match {
           case erc20(receiver, amount) =>
-            Right(ERC20(receiver, BigDecimal.apply(amount).toLongExact))
+            Right(ERC20(receiver, scala.BigInt(amount, 16)))
           case _ => Left(s"bad erc20 data format: $data")
         }
       } else Left("bad erc20 data size")
