@@ -109,18 +109,18 @@ object TransactionsController {
   }
 
   case class CreateETHTransactionRequest(recipient: String,
-                                         amount: Long,
-                                         gas_limit: Long,
-                                         gas_price: Long,
+                                         amount: BigInt,
+                                         gas_limit: BigInt,
+                                         gas_price: BigInt,
                                          contract: Option[String]
                                         ) extends CreateTransactionRequest {
     override def transactionInfo: TransactionInfo = ETHTransactionInfo(recipient, amount, gas_limit, gas_price, contract)
   }
 
   case class CreateBTCTransactionRequest(recipient: String,
-                                         fees_per_byte: Option[Long],
+                                         fees_per_byte: Option[BigInt],
                                          fees_level: Option[String],
-                                         amount: Long,
+                                         amount: BigInt,
                                          exclude_utxos: Option[Map[String, Int]],
                                         ) extends CreateTransactionRequest {
 
@@ -132,9 +132,9 @@ object TransactionsController {
 
   trait TransactionInfo
 
-  case class BTCTransactionInfo(recipient: String, feeAmount: Option[Long], feeLevel: Option[String], amount: Long, excludeUtxos: Map[String, Int]) extends TransactionInfo {
+  case class BTCTransactionInfo(recipient: String, feeAmount: Option[BigInt], feeLevel: Option[String], amount: BigInt, excludeUtxos: Map[String, Int]) extends TransactionInfo {
     lazy val feeMethod: Option[FeeMethod] = feeLevel.map { level => FeeMethod.from(level) }
   }
 
-  case class ETHTransactionInfo(recipient: String, amount: Long, gasLimit: Long, gasPrice: Long, contract: Option[String]) extends TransactionInfo
+  case class ETHTransactionInfo(recipient: String, amount: BigInt, gasLimit: BigInt, gasPrice: BigInt, contract: Option[String]) extends TransactionInfo
 }

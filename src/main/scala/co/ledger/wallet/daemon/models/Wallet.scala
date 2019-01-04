@@ -173,7 +173,7 @@ object Wallet extends Logging {
     coreA
   }
 
-  private def getBalance(w: core.Wallet)(implicit ec: ExecutionContext): Future[Long] = {
+  private def getBalance(w: core.Wallet)(implicit ec: ExecutionContext): Future[BigInt] = {
     accounts(w).flatMap { as =>
       Future.sequence(for (a <- as) yield a.balance).map { b => b.sum }
     }
@@ -183,7 +183,7 @@ object Wallet extends Logging {
 case class WalletView(
                        @JsonProperty("name") name: String,
                        @JsonProperty("account_count") accountCount: Int,
-                       @JsonProperty("balance") balance: Long,
+                       @JsonProperty("balance") balance: BigInt,
                        @JsonProperty("currency") currency: CurrencyView,
                        @JsonProperty("configuration") configuration: Map[String, Any]
                      )

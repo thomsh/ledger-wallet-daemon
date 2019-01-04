@@ -43,7 +43,7 @@ object Utils {
   }
 
   implicit class RichBigInt(val i: co.ledger.core.BigInt) extends AnyVal {
-    def toLong: Long = i.toString(10).toLong
+    def asScala: BigInt = BigInt(i.toString(10))
   }
 
 }

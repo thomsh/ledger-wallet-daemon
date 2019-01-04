@@ -194,7 +194,7 @@ object AccountsController {
     def validateAccountIndex: ValidationResult = ValidationResult.validate(account_index >= 0, "account_index: index can not be less than zero")
   }
 
-  case class HistoryResponse(balances: List[Long], operationCounts: List[Map[OperationType, Int]])
+  case class HistoryResponse(balances: List[BigInt], operationCounts: List[Map[OperationType, Int]])
 
   case class HistoryRequest(
                              @RouteParam override val pool_name: String,

@@ -8,6 +8,7 @@ import co.ledger.wallet.daemon.async.MDCPropagatingExecutionContext
 import co.ledger.wallet.daemon.models.coins.Coin._
 import co.ledger.wallet.daemon.utils.HexUtils
 import com.fasterxml.jackson.annotation.JsonProperty
+import co.ledger.wallet.daemon.utils.Utils.RichBigInt
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +33,7 @@ object Bitcoin {
   def newTransactionView(from: core.BitcoinLikeTransaction): TransactionView = {
     BitcoinTransactionView(
       Option(from.getBlock).map (newBlockView),
-      Option(from.getFees).map (fees => fees.toLong),
+      Option(from.getFees).map (fees => fees.toBigInt.asScala),
       from.getHash,
       from.getTime,
       from.getInputs.asScala.map(newInputView),
@@ -41,11 +42,11 @@ object Bitcoin {
     )
   }
 
-  def newUnsignedTransactionView(from: core.BitcoinLikeTransaction, feesPerByte: Long): Future[UnsignedBitcoinTransactionView] = {
+  def newUnsignedTransactionView(from: core.BitcoinLikeTransaction, feesPerByte: BigInt): Future[UnsignedBitcoinTransactionView] = {
     Future.sequence(from.getInputs.asScala.map(newUnsignedInputView)).map { unsignedInputs =>
       UnsignedBitcoinTransactionView(
         newEstimatedSizeView(from.getEstimatedSize),
-        from.getFees.toLong,
+        from.getFees.toBigInt.asScala,
         feesPerByte,
         unsignedInputs,
         from.getLockTime,
@@ -58,7 +59,7 @@ object Bitcoin {
   private def newUnsignedOutputView(from: core.BitcoinLikeOutput): UnsignedBitcoinOutputView = {
     UnsignedBitcoinOutputView(
       from.getAddress,
-      from.getValue.toLong,
+      from.getValue.toBigInt.asScala,
       HexUtils.valueOf(from.getScript),
       Option(from.getDerivationPath).map(_.toString)
     )
@@ -80,7 +81,7 @@ object Bitcoin {
       } yield (path.toString, HexUtils.valueOf(pubKey))
       UnsignedBitcoinInputView(
         from.getAddress,
-        from.getValue.toLong,
+        from.getValue.toBigInt.asScala,
         from.getPreviousTxHash,
         HexUtils.valueOf(previousTx),
         from.getPreviousOutputIndex,
@@ -90,11 +91,11 @@ object Bitcoin {
 
   private def newInputView(from: core.BitcoinLikeInput): InputView = {
     val previousIndex: Int = from.getPreviousOutputIndex
-    BitcoinInputView(from.getAddress, from.getValue.toLong, Option(from.getCoinbase), Option(from.getPreviousTxHash), Option(previousIndex))
+    BitcoinInputView(from.getAddress, from.getValue.toBigInt.asScala, Option(from.getCoinbase), Option(from.getPreviousTxHash), Option(previousIndex))
   }
 
   private def newOutputView(from: core.BitcoinLikeOutput): OutputView = {
-    BitcoinOutputView(from.getAddress, from.getTransactionHash, from.getOutputIndex, from.getValue.toLong, HexUtils.valueOf(from.getScript))
+    BitcoinOutputView(from.getAddress, from.getTransactionHash, from.getOutputIndex, from.getValue.toBigInt.asScala, HexUtils.valueOf(from.getScript))
   }
 }
 
@@ -104,14 +105,14 @@ case class BitcoinNetworkParamsView(
                                      @JsonProperty("p2sh_version") p2shVersion: String,
                                      @JsonProperty("xpub_version") xpubVersion: String,
                                      @JsonProperty("fee_policy") feePolicy: String,
-                                     @JsonProperty("dust_amount") dustAmount: Long,
+                                     @JsonProperty("dust_amount") dustAmount: BigInt,
                                      @JsonProperty("message_prefix") messagePrefix: String,
                                      @JsonProperty("uses_timestamped_transaction") usesTimeStampedTransaction: Boolean
                                    ) extends NetworkParamsView
 
 case class BitcoinTransactionView(
                                    @JsonProperty("block") block: Option[BlockView],
-                                   @JsonProperty("fees") fees: Option[Long],
+                                   @JsonProperty("fees") fees: Option[BigInt],
                                    @JsonProperty("hash") hash: String,
                                    @JsonProperty("time") time: Date,
                                    @JsonProperty("inputs") inputs: Seq[InputView],
@@ -121,7 +122,7 @@ case class BitcoinTransactionView(
 
 case class BitcoinInputView(
                            @JsonProperty("address") address: String,
-                           @JsonProperty("value") value: Long,
+                           @JsonProperty("value") value: BigInt,
                            @JsonProperty("coinbase") coinbase: Option[String],
                            @JsonProperty("previous_transaction_hash") previousTxHash: Option[String],
                            @JsonProperty("previous_output_index") previousOutputIndex: Option[Int]
@@ -131,13 +132,13 @@ case class BitcoinOutputView(
                             @JsonProperty("address") address: String,
                             @JsonProperty("transaction_hash") txHash: String,
                             @JsonProperty("output_index") outputIndex: Int,
-                            @JsonProperty("value") value: Long,
+                            @JsonProperty("value") value: BigInt,
                             @JsonProperty("script") script: String
                             ) extends OutputView
 
 case class UnsignedBitcoinInputView(
                                    @JsonProperty("address") address: String,
-                                   @JsonProperty("value") value: Long,
+                                   @JsonProperty("value") value: BigInt,
                                    @JsonProperty("previous_transaction_hash") previousTxHash: String,
                                    @JsonProperty("previous_transaction_raw") previousTx: String,
                                    @JsonProperty("previous_output_index") previousOutputIndex: Int,
@@ -146,15 +147,15 @@ case class UnsignedBitcoinInputView(
 
 case class UnsignedBitcoinOutputView(
                                     @JsonProperty("address") address: String,
-                                    @JsonProperty("value") value: Long,
+                                    @JsonProperty("value") value: BigInt,
                                     @JsonProperty("script") script: String,
                                     @JsonProperty("derivation_path") derivationPath: Option[String]
                                     ) extends OutputView
 
 case class UnsignedBitcoinTransactionView(
                             @JsonProperty("estimated_size") estimatedSize: EstimatedSizeView,
-                            @JsonProperty("fees") fees: Long,
-                            @JsonProperty("fees_per_byte") feesPerByte: Long,
+                            @JsonProperty("fees") fees: BigInt,
+                            @JsonProperty("fees_per_byte") feesPerByte: BigInt,
                             @JsonProperty("inputs") inputs: Seq[UnsignedBitcoinInputView],
                             @JsonProperty("lock_time") lockTime: Long,
                             @JsonProperty("outputs") outputs: Seq[UnsignedBitcoinOutputView],

@@ -4,7 +4,7 @@ import java.util.UUID
 
 case class ERC20NotFoundException(contract: String) extends DaemonException(s"No ERC20 token $contract in your account")
 
-case class ERC20BalanceNotEnough(tokenAddress: String, balance: Long, need: Long)
+case class ERC20BalanceNotEnough(tokenAddress: String, balance: BigInt, need: BigInt)
   extends DaemonException(s"Not enough funds on ERC20 ($tokenAddress) account: having $balance, need $need")
 
 case class AccountNotFoundException(accountIndex: Int) extends DaemonException(s"Account with index $accountIndex doesn't exist")

@@ -18,7 +18,7 @@ object CommonMethodValidations {
       s"$name: invalid $name, $name should match ${REGEX.toString()}")
   }
 
-  def validateFees(feeAmount: Option[Long], feeLevel: Option[String]): ValidationResult = {
+  def validateFees(feeAmount: Option[BigInt], feeLevel: Option[String]): ValidationResult = {
     ValidationResult.validate(feeAmount.isDefined
       || (feeLevel.isDefined && FeeMethod.isValid(feeLevel.get)),
       "fee_amount or fee_level must be defined, fee_level must be one of 'FAST', 'NORMAL', 'SLOW'")

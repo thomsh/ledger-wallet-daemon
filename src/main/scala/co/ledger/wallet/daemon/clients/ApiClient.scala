@@ -76,11 +76,11 @@ class ApiClient(implicit val ec: ExecutionContext) {
 
 object ApiClient {
   case class FeeInfo(
-                    @JsonProperty("1") fast: Long,
-                    @JsonProperty("3") normal: Long,
-                    @JsonProperty("6") slow: Long) {
+                    @JsonProperty("1") fast: BigInt,
+                    @JsonProperty("3") normal: BigInt,
+                    @JsonProperty("6") slow: BigInt) {
 
-    def getAmount(feeMethod: FeeMethod): Long = feeMethod match {
+    def getAmount(feeMethod: FeeMethod): BigInt = feeMethod match {
       case FeeMethod.FAST => fast / 1000
       case FeeMethod.NORMAL => normal / 1000
       case FeeMethod.SLOW => slow / 1000

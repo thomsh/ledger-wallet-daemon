@@ -13,7 +13,7 @@ import co.ledger.wallet.daemon.exceptions.{ERC20BalanceNotEnough, ERC20NotFoundE
 import co.ledger.wallet.daemon.libledger_core.async.LedgerCoreExecutionContext
 import co.ledger.wallet.daemon.models.Currency._
 import co.ledger.wallet.daemon.models.coins.Coin.TransactionView
-import co.ledger.wallet.daemon.models.coins.{Bitcoin, ERC20OperationView, UnsignedEthereumTransactionView}
+import co.ledger.wallet.daemon.models.coins.{Bitcoin, UnsignedEthereumTransactionView}
 import co.ledger.wallet.daemon.schedulers.observers.{SynchronizationEventReceiver, SynchronizationResult}
 import co.ledger.wallet.daemon.services.LogMsgMaker
 import co.ledger.wallet.daemon.utils.HexUtils
@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 object Account extends Logging {
 
   implicit class RichCoreAccount(val a: core.Account) extends AnyVal {
-    def erc20Balance(contract: String): Either[Exception, Long] =
+    def erc20Balance(contract: String): Either[Exception, scala.BigInt] =
       Account.erc20Balance(contract, a)
 
     def erc20Operations(contract: String)(implicit ec: ExecutionContext): Future[List[core.Operation]] =
@@ -44,10 +44,10 @@ object Account extends Logging {
     def erc20Account(tokenAddress: String): Either[Exception, core.ERC20LikeAccount] =
       asERC20Account(tokenAddress, a)
 
-    def balance(implicit ec: ExecutionContext): Future[Long] =
+    def balance(implicit ec: ExecutionContext): Future[scala.BigInt] =
       Account.balance(a)
 
-    def balances(start: String, end: String, timePeriod: core.TimePeriod)(implicit ec: ExecutionContext): Future[List[Long]] =
+    def balances(start: String, end: String, timePeriod: core.TimePeriod)(implicit ec: ExecutionContext): Future[List[scala.BigInt]] =
       Account.balances(start, end, timePeriod, a)
 
     def firstOperation(implicit ec: ExecutionContext): Future[Option[core.Operation]] =
@@ -90,9 +90,9 @@ object Account extends Logging {
       Account.stopRealTimeObserver(a)
   }
 
-  def balance(a: core.Account)(implicit ex: ExecutionContext): Future[Long] = a.getBalance().map { b =>
-    debug(s"Account ${a.getIndex}, balance: ${b.toLong}")
-    b.toLong
+  def balance(a: core.Account)(implicit ex: ExecutionContext): Future[scala.BigInt] = a.getBalance().map { b =>
+    debug(s"Account ${a.getIndex}, balance: ${b}")
+    b.toBigInt.asScala
   }
 
   private def asETHAccount(a: core.Account): Either[Exception, EthereumLikeAccount] = {
@@ -112,8 +112,8 @@ object Account extends Logging {
   def erc20Accounts(a: core.Account): Either[Exception, List[core.ERC20LikeAccount]] =
     asETHAccount(a).map(_.getERC20Accounts.asScala.toList)
 
-  def erc20Balance(contract: String, a: core.Account): Either[Exception, Long] =
-    asERC20Account(contract, a).map(_.getBalance.toLong)
+  def erc20Balance(contract: String, a: core.Account): Either[Exception, scala.BigInt] =
+    asERC20Account(contract, a).map(_.getBalance.asScala)
 
   def erc20Operations(contract: String, a: core.Account)(implicit ec: ExecutionContext): Future[List[core.Operation]] =
     asERC20Account(contract, a).liftTo[Future].flatMap(erc20Operations)
@@ -181,18 +181,16 @@ object Account extends Logging {
             .pickInputs(BitcoinLikePickingStrategy.DEEP_OUTPUTS_FIRST, UnsignedInteger.MAX_VALUE.intValue())
             .setFeesPerByte(feesPerByte)
             .build()
-          v <- Bitcoin.newUnsignedTransactionView(tx, feesPerByte.toLong)
+          v <- Bitcoin.newUnsignedTransactionView(tx, feesPerByte.toBigInt.asScala)
         } yield v
       case (ti: ETHTransactionInfo, WalletType.ETHEREUM) =>
         ti.contract match {
           case Some(contract) =>
             a.asEthereumLikeAccount().getERC20Accounts.asScala.find(_.getToken.getContractAddress == contract) match {
               case Some(erc20Account) =>
-                val balance: Long = erc20Account.getBalance.toLong
-                // TODO just for test usage, can be removed
-                debug(s"Creating ERC20 transaction on account (balance: $balance, operations: ${erc20Account.getOperations.asScala.map(ERC20OperationView(_))}) ... transaction info: $ti")
+                val balance: scala.BigInt = erc20Account.getBalance.asScala
                 if (balance > ti.amount) {
-                  val inputData = erc20Account.getTransferToAddressData(BigInt.fromLong(ti.amount), ti.recipient)
+                  val inputData = erc20Account.getTransferToAddressData(BigInt.fromIntegerString(ti.amount.toString(10), 10), ti.recipient)
                   a.asEthereumLikeAccount().buildTransaction()
                     .sendToAddress(c.convertAmount(0), contract)
                     .setGasLimit(c.convertAmount(ti.gasLimit))
@@ -238,9 +236,9 @@ object Account extends Logging {
     }).map { operations => operations.asScala.toList }
   }
 
-  def balances(start: String, end: String, timePeriod: core.TimePeriod, a: core.Account)(implicit ec: ExecutionContext): Future[List[Long]] = {
+  def balances(start: String, end: String, timePeriod: core.TimePeriod, a: core.Account)(implicit ec: ExecutionContext): Future[List[scala.BigInt]] = {
     a.getBalanceHistory(start, end, timePeriod).map { balances =>
-      balances.asScala.toList.map { ba => ba.toLong }
+      balances.asScala.toList.map { ba => ba.toBigInt.asScala }
     }
   }
 
@@ -366,7 +364,7 @@ object Account extends Logging {
 case class AccountView(
                         @JsonProperty("wallet_name") walletName: String,
                         @JsonProperty("index") index: Int,
-                        @JsonProperty("balance") balance: Long,
+                        @JsonProperty("balance") balance: scala.BigInt,
                         @JsonProperty("operation_count") operationCounts: Map[core.OperationType, Int],
                         @JsonProperty("keychain") keychain: String,
                         @JsonProperty("currency") currency: CurrencyView
@@ -377,7 +375,7 @@ case class ERC20AccountView(
                              @JsonProperty("name") name: String,
                              @JsonProperty("number_of_decimal") numberOrDecimal: Int,
                              @JsonProperty("symbol") symbol: String,
-                             @JsonProperty("balance") balance: Long
+                             @JsonProperty("balance") balance: scala.BigInt
                            )
 
 object ERC20AccountView {
@@ -387,7 +385,7 @@ object ERC20AccountView {
       erc20Account.getToken.getName,
       erc20Account.getToken.getNumberOfDecimal,
       erc20Account.getToken.getSymbol,
-      erc20Account.getBalance.toLong
+      erc20Account.getBalance.asScala
     )
   }
 }

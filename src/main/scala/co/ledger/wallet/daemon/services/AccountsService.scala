@@ -48,7 +48,7 @@ class AccountsService @Inject()(daemonCache: DaemonCache) extends DaemonService 
     daemonCache.getAccount(accountInfo: AccountInfo)
   }
 
-  def getBalance(contract: Option[String], accountInfo: AccountInfo): Future[Long] =
+  def getBalance(contract: Option[String], accountInfo: AccountInfo): Future[BigInt] =
     daemonCache.withAccount(accountInfo)(a => contract match {
       case Some(c) => a.erc20Balance(c).liftTo[Future]
       case None => a.balance

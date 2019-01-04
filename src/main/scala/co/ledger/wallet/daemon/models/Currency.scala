@@ -13,7 +13,7 @@ object Currency {
     def parseUnsignedBTCTransaction(rawTx: Array[Byte], currentHeight: Long): Either[String, core.BitcoinLikeTransaction] = Currency.parseUnsignedBTCTransaction(c)(rawTx, currentHeight)
     def parseUnsignedETHTransaction(rawTx: Array[Byte]): Either[String, core.EthereumLikeTransaction] = Currency.parseUnsignedETHTransaction(c)(rawTx)
     def validateAddress(address: String): Boolean = Currency.validateAddress(c)(address)
-    def convertAmount(amount: Long): core.Amount = Currency.convertAmount(c)(amount)
+    def convertAmount(amount: BigInt): core.Amount = Currency.convertAmount(c)(amount)
     def currencyView: CurrencyView = Currency.currencyView(c)
   }
 
@@ -36,7 +36,7 @@ object Currency {
 
   def validateAddress(c: core.Currency)(address: String): Boolean = core.Address.isValid(address, c)
 
-  def convertAmount(c: core.Currency)(amount: Long): core.Amount = core.Amount.fromLong(c, amount)
+  def convertAmount(c: core.Currency)(amount: BigInt): core.Amount = core.Amount.fromHex(c, amount.toString(16))
 
   def currencyView(c: core.Currency): CurrencyView = CurrencyView(
     c.getName,
