@@ -85,8 +85,8 @@ explorer {
     // ethereum, ethereum_ropsten
     // if no key found, will use default lib core value, which is
     // currently the v2 url
-    ethereum = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
-    ethereum_ropsten = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
+    ethereum = "eth-mainnet.explorers.dev.aws.ledger.fr"
+    ethereum_ropsten = "eth-ropsten.explorers.dev.aws.ledger.fr"
   }
   ws {
     // possible keys: bitcoin, bitcoin_testnet, bitcoin_cash,
@@ -96,7 +96,7 @@ explorer {
     // ethereum, ethereum_ropsten
     // if no key found, will use default lib core value, which is
     // currently the v2 url
-    ethereum = "ws://notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
-    ethereum_ropsten = "ws://notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
+    ethereum = "notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
+    ethereum_ropsten = "notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
   }
 }

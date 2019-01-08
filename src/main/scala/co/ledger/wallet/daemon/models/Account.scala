@@ -184,31 +184,40 @@ object Account extends Logging {
           v <- Bitcoin.newUnsignedTransactionView(tx, feesPerByte.toBigInt.asScala)
         } yield v
       case (ti: ETHTransactionInfo, WalletType.ETHEREUM) =>
-        ti.contract match {
-          case Some(contract) =>
-            a.asEthereumLikeAccount().getERC20Accounts.asScala.find(_.getToken.getContractAddress == contract) match {
-              case Some(erc20Account) =>
-                val balance: scala.BigInt = erc20Account.getBalance.asScala
-                if (balance > ti.amount) {
-                  val inputData = erc20Account.getTransferToAddressData(BigInt.fromIntegerString(ti.amount.toString(10), 10), ti.recipient)
-                  a.asEthereumLikeAccount().buildTransaction()
-                    .sendToAddress(c.convertAmount(0), contract)
-                    .setGasLimit(c.convertAmount(ti.gasLimit))
-                    .setGasPrice(c.convertAmount(ti.gasPrice))
-                    .setInputData(inputData)
-                    .build().map(UnsignedEthereumTransactionView(_))
-                } else {
-                  Future.failed(ERC20BalanceNotEnough(erc20Account.getToken.getContractAddress, balance, ti.amount))
-                }
-              case None => Future.failed(ERC20BalanceNotEnough(contract, 0, ti.amount))
-            }
-          case None =>
-            a.asEthereumLikeAccount().buildTransaction()
-              .sendToAddress(c.convertAmount(ti.amount), ti.recipient)
-              .setGasLimit(c.convertAmount(ti.gasLimit))
-              .setGasPrice(c.convertAmount(ti.gasPrice))
-              .build().map(UnsignedEthereumTransactionView(_))
-        }
+        for {
+          gasPrice <- ti.gasPrice match {
+            case Some(amount) => Future.successful(amount)
+            case None => ClientFactory.apiClient.getGas(c.getName).map { _.price }
+          }
+          v <- ti.contract match {
+            case Some(contract) =>
+              a.asEthereumLikeAccount().getERC20Accounts.asScala.find(_.getToken.getContractAddress == contract) match {
+                case Some(erc20Account) =>
+                  val balance: scala.BigInt = erc20Account.getBalance.asScala
+                  if (balance > ti.amount) {
+                    val inputData = erc20Account.getTransferToAddressData(BigInt.fromIntegerString(ti.amount.toString(10), 10), ti.recipient)
+                    val v = a.asEthereumLikeAccount().buildTransaction()
+                      .sendToAddress(c.convertAmount(0), contract)
+                      .setGasLimit(c.convertAmount(ti.gasLimit))
+                      .setGasPrice(c.convertAmount(gasPrice))
+                      .setInputData(inputData)
+                      .build()
+                      .map(UnsignedEthereumTransactionView(_))
+                    v
+                  } else {
+                    Future.failed(ERC20BalanceNotEnough(erc20Account.getToken.getContractAddress, balance, ti.amount))
+                  }
+                case None => Future.failed(ERC20BalanceNotEnough(contract, 0, ti.amount))
+              }
+            case None =>
+              a.asEthereumLikeAccount().buildTransaction()
+                .sendToAddress(c.convertAmount(ti.amount), ti.recipient)
+                .setGasLimit(c.convertAmount(ti.gasLimit))
+                .setGasPrice(c.convertAmount(gasPrice))
+                .build()
+                .map(UnsignedEthereumTransactionView(_))
+          }
+        } yield v
       case _ => Future.failed(new UnsupportedOperationException("Account type not supported, can't create transaction"))
     }
   }

@@ -111,7 +111,7 @@ object TransactionsController {
   case class CreateETHTransactionRequest(recipient: String,
                                          amount: BigInt,
                                          gas_limit: BigInt,
-                                         gas_price: BigInt,
+                                         gas_price: Option[BigInt],
                                          contract: Option[String]
                                         ) extends CreateTransactionRequest {
     override def transactionInfo: TransactionInfo = ETHTransactionInfo(recipient, amount, gas_limit, gas_price, contract)
@@ -136,5 +136,5 @@ object TransactionsController {
     lazy val feeMethod: Option[FeeMethod] = feeLevel.map { level => FeeMethod.from(level) }
   }
 
-  case class ETHTransactionInfo(recipient: String, amount: BigInt, gasLimit: BigInt, gasPrice: BigInt, contract: Option[String]) extends TransactionInfo
+  case class ETHTransactionInfo(recipient: String, amount: BigInt, gasLimit: BigInt, gasPrice: Option[BigInt], contract: Option[String]) extends TransactionInfo
 }

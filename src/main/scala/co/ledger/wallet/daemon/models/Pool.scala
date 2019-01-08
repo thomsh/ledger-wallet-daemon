@@ -106,9 +106,9 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
     coreP.getCurrency(currencyName).flatMap { coreC =>
       val walletConfig = core.DynamicObject.newInstance()
       val apiUrl = DaemonConfiguration.explorerApiAddresses.getOrElse(coreC.getName, ConfigurationDefaults.BLOCKCHAIN_DEFAULT_API_ENDPOINT)
-      walletConfig.putString("BLOCKCHAIN_EXPLORER_API_ENDPOINT", apiUrl)
+      walletConfig.putString("BLOCKCHAIN_EXPLORER_API_ENDPOINT", s"http://$apiUrl")
       val wsUrl = DaemonConfiguration.explorerWebsocketAddresses.getOrElse(coreC.getName, ConfigurationDefaults.BLOCKCHAIN_OBSERVER_WS_ENDPOINT)
-      walletConfig.putString("BLOCKCHAIN_OBSERVER_WS_ENDPOINT", wsUrl)
+      walletConfig.putString("BLOCKCHAIN_OBSERVER_WS_ENDPOINT", s"ws://$wsUrl")
       coreP.createWallet(walletName, coreC, walletConfig).flatMap { coreW =>
         info(LogMsgMaker.newInstance("Wallet created").append("name", walletName).append("pool_name", name).append("currency_name", currencyName).toString())
         startListen(coreW)

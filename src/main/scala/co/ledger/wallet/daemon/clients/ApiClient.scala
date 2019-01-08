@@ -5,6 +5,7 @@ import java.net.InetSocketAddress
 import javax.inject.Singleton
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.models.FeeMethod
+import co.ledger.core.ConfigurationDefaults
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -13,6 +14,7 @@ import com.twitter.finagle.Http
 import co.ledger.wallet.daemon.utils.Utils._
 import com.twitter.finagle.client.Transporter
 import com.twitter.finagle.http.{Method, Request}
+import com.twitter.inject.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,20 +27,12 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   */
 @Singleton
-class ApiClient(implicit val ec: ExecutionContext) {
+class ApiClient(implicit val ec: ExecutionContext) extends Logging {
   import ApiClient._
-  private[this] val (host, port, poolSize) = DaemonConfiguration.apiConnection
+  private[this] val (btcHost, port, poolSize) = DaemonConfiguration.apiConnection
   private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private [this] val client = if(proxyEnabled) {
-    Http.client
-      .withSessionPool.maxSize(poolSize)
-      .configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
-      .newService(s"$host:$port")
-  } else {
-    Http.client
-      .withSessionPool.maxSize(poolSize)
-      .newService(s"$host:$port")
-  }
+  private[this] val client = buildClient()
+  private[this] val btcService = client.newService(s"$btcHost:$port")
 
   //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
@@ -64,10 +58,31 @@ class ApiClient(implicit val ec: ExecutionContext) {
     }
     val request = Request(Method.Get, path)
     request.host = "api.ledgerwallet.com"
-    client(request).map { response =>
+    btcService(request).map { response =>
       mapper.readValue(response.contentString, classOf[FeeInfo])
     }.asScala
   }
+
+  def getGas(currencyName: String): Future[GasInfo] = {
+    val request = Request(Method.Get, "/blockchain/v3/fees")
+    val host = DaemonConfiguration.explorerApiAddresses.getOrElse(currencyName, ConfigurationDefaults.BLOCKCHAIN_DEFAULT_API_ENDPOINT)
+    request.host = host
+
+    val service = client.newService(s"$host:$port")
+    service(request).map { response =>
+      info(s"$response : ${response.status} ${response.contentString}")
+      mapper.readValue(response.contentString, classOf[GasInfo])
+    }.asScala
+  }
+
+  private def buildClient(): Http.Client = {
+    var client = Http.client.withSessionPool.maxSize(poolSize)
+    if (proxyEnabled) {
+      client = client.configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
+    }
+    client
+  }
+
 
   private val mapper: ObjectMapper = new ObjectMapper() with ScalaObjectMapper
   mapper.registerModule(DefaultScalaModule)
@@ -86,4 +101,6 @@ object ApiClient {
       case FeeMethod.SLOW => slow / 1000
     }
   }
+
+  case class GasInfo(@JsonProperty("gas_price") price: BigInt)
 }
