@@ -111,3 +111,8 @@ scalacOptions ++= Seq(
   "-Ywarn-unused:patvars",             // Warn if a variable bound in a pattern is unused.
   "-Ywarn-unused:privates"            // Warn if a private member is unused.
 )
+
+libraryDependencies ++= Seq(
+  compilerPlugin("com.github.ghik" %% "silencer-plugin" % "1.3.1"),
+  "com.github.ghik" %% "silencer-lib" % "1.3.1" % Provided
+)
