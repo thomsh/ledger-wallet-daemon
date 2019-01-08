@@ -5,7 +5,6 @@ import java.net.InetSocketAddress
 import javax.inject.Singleton
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.models.FeeMethod
-import co.ledger.core.ConfigurationDefaults
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -31,8 +30,10 @@ class ApiClient(implicit val ec: ExecutionContext) extends Logging {
   import ApiClient._
   private[this] val (btcHost, port, poolSize) = DaemonConfiguration.apiConnection
   private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private[this] val client = buildClient()
-  private[this] val btcService = client.newService(s"$btcHost:$port")
+  private[this] val btcService = buildClient().newService(s"$btcHost:$port")
+  private[this] val ethServices = DaemonConfiguration.explorerApiAddresses.map { case (currencyName, host) =>
+    (currencyName, (host, buildClient().newService(s"$host:$port")))
+  }
 
   //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
@@ -64,11 +65,10 @@ class ApiClient(implicit val ec: ExecutionContext) extends Logging {
   }
 
   def getGas(currencyName: String): Future[GasInfo] = {
+    val (host, service) = ethServices(currencyName)
     val request = Request(Method.Get, "/blockchain/v3/fees")
-    val host = DaemonConfiguration.explorerApiAddresses.getOrElse(currencyName, ConfigurationDefaults.BLOCKCHAIN_DEFAULT_API_ENDPOINT)
     request.host = host
 
-    val service = client.newService(s"$host:$port")
     service(request).map { response =>
       info(s"$response : ${response.status} ${response.contentString}")
       mapper.readValue(response.contentString, classOf[GasInfo])
@@ -82,7 +82,6 @@ class ApiClient(implicit val ec: ExecutionContext) extends Logging {
     }
     client
   }
-
 
   private val mapper: ObjectMapper = new ObjectMapper() with ScalaObjectMapper
   mapper.registerModule(DefaultScalaModule)
