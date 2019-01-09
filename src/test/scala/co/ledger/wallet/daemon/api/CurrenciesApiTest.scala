@@ -2,6 +2,7 @@ package co.ledger.wallet.daemon.api
 
 import co.ledger.core
 import co.ledger.wallet.daemon.controllers.responses.{ErrorCode, ErrorResponseBody}
+import co.ledger.wallet.daemon.exceptions.ErrorCodes
 import co.ledger.wallet.daemon.models.coins.BitcoinNetworkParamsView
 import co.ledger.wallet.daemon.models.{CurrencyView, UnitView}
 import co.ledger.wallet.daemon.utils.APIFeatureTest
@@ -23,13 +24,14 @@ class CurrenciesApiTest extends APIFeatureTest {
   }
 
   test("CurrenciesApi#Get currency from non-existing pool returns bad request") {
-    assert(parse[ErrorResponseBody](assertCurrency(CURRENCY_NON_EXIST_POOL, CURRENCY_BTC, Status.BadRequest))
-      == ErrorResponseBody(ErrorCode.Bad_Request,Map("response"->"Wallet pool doesn't exist","pool_name"->"non_exist_pool")))
+    val rep = parse[ErrorResponseBody](assertCurrency(CURRENCY_NON_EXIST_POOL, CURRENCY_BTC, Status.BadRequest))
+    assert(rep.rc === ErrorCode.Bad_Request)
+    assert(rep.msg.getOrElse("error_code", 0) === ErrorCodes.WALLET_POOL_NOT_FOUND)
   }
 
   test("CurrenciesApi#Get non-supported currency from existing pool returns currency not found") {
-    assert(parse[ErrorResponseBody](assertCurrency(CURRENCY_POOL, CURRENCY_NON_EXIST, Status.NotFound))
-      == ErrorResponseBody(ErrorCode.Not_Found, Map("response"->"Currency not support", "currency_name"-> CURRENCY_NON_EXIST)))
+    assert(parse[ErrorResponseBody](assertCurrency(CURRENCY_POOL, CURRENCY_NON_EXIST, Status.NotFound)).rc
+      == ErrorCode.Not_Found)
   }
 
   test("CurrenciesApi#Get currencies returns all") {
@@ -39,8 +41,9 @@ class CurrenciesApiTest extends APIFeatureTest {
   }
 
   test("CurrenciesApi#Get currencies from non-existing pool returns bad request") {
-    assert(parse[ErrorResponseBody](assertCurrencies(CURRENCY_NON_EXIST_POOL, Status.BadRequest))
-      == ErrorResponseBody(ErrorCode.Bad_Request,Map("response"->"Wallet pool doesn't exist","pool_name"->"non_exist_pool")))
+    val rep = parse[ErrorResponseBody](assertCurrencies(CURRENCY_NON_EXIST_POOL, Status.BadRequest))
+    assert(rep.rc == ErrorCode.Bad_Request)
+    assert(rep.msg.getOrElse("error_code", 0) === ErrorCodes.WALLET_POOL_NOT_FOUND)
   }
 
   private def assertCurrency(poolName: String, currencyName: String, expected: Status): Response = {

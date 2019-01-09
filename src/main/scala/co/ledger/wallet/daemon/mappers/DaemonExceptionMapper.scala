@@ -9,61 +9,66 @@ import javax.inject.{Inject, Singleton}
 
 @Singleton
 class DaemonExceptionMapper @Inject()(response: ResponseBuilder)
-  extends ExceptionMapper[DaemonException] {
-  override def toResponse(request: Request, throwable: DaemonException): Response = {
+  extends ExceptionMapper[Exception with DaemonException] {
+
+  private def daemonExceptionInfo(de: DaemonException): Map[String, Any] =
+    Map("response" -> de.msg, "error_code" -> de.code)
+
+  override def toResponse(request: Request, throwable: Exception with DaemonException): Response = {
     throwable match {
       case anfe: AccountNotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> "Account doesn't exist", "account_index" -> anfe.accountIndex),
+          daemonExceptionInfo(anfe) + ("account_index" -> anfe.accountIndex),
           response)
-      case _: OperationNotFoundException =>
+      case e: OperationNotFoundException =>
         val next = request.getParam("next")
         val previous = request.getParam("previous")
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> "Operation cursor doesn't exist", "next_cursor" -> next, "previous_cursor" -> previous),
+          daemonExceptionInfo(e) + ("next_cursor" -> next, "previous_cursor" -> previous),
           response)
       case wnfe: WalletNotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> "Wallet doesn't exist", "wallet_name" -> wnfe.walletName),
+          daemonExceptionInfo(wnfe) + ("wallet_name" -> wnfe.walletName),
           response)
       case wpnfe: WalletPoolNotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> "Wallet pool doesn't exist", "pool_name" -> wpnfe.poolName),
+          daemonExceptionInfo(wpnfe) + ("pool_name" -> wpnfe.poolName),
           response)
       case wpaee: WalletPoolAlreadyExistException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> wpaee.getMessage, "pool_name" -> wpaee.poolName),
+          daemonExceptionInfo(wpaee) + ("pool_name" -> wpaee.poolName),
           response)
       case cnfe: CurrencyNotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> "Currency not support", "currency_name" -> cnfe.currencyName),
+          daemonExceptionInfo(cnfe) + ("currency_name" -> cnfe.currencyName),
           response)
       case unfe: UserNotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> unfe.getMessage, "pub_key" -> unfe.pubKey),
+          daemonExceptionInfo(unfe) + ("pub_key" -> unfe.pubKey),
           response)
       case uaee: UserAlreadyExistException =>
-        ResponseSerializer.serializeBadRequest( Map("response" -> uaee.getMessage, "pub_key" -> uaee.pubKey),
+        ResponseSerializer.serializeBadRequest(
+          daemonExceptionInfo(uaee) + ("pub_key" -> uaee.pubKey),
           response)
       case iae: CoreBadRequestException =>
         val walletName = request.getParam("wallet_name")
         val poolName = request.getParam("pool_name")
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> iae.msg, "pool_name" -> poolName, "wallet_name" -> walletName),
+          daemonExceptionInfo(iae) + ("pool_name" -> poolName, "wallet_name" -> walletName),
           response)
       case ssnme: SignatureSizeUnmatchException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> ssnme.getMessage, "tx_size" -> ssnme.txSize, "sig_size" -> ssnme.signatureSize),
+          daemonExceptionInfo(ssnme) + ("tx_size" -> ssnme.txSize, "sig_size" -> ssnme.signatureSize),
           response
         )
       case enfe: ERC20NotFoundException =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> enfe.getMessage, "contract" -> enfe.contract),
+          daemonExceptionInfo(enfe) + ("contract" -> enfe.contract),
           response
         )
       case e: ERC20BalanceNotEnough =>
         ResponseSerializer.serializeBadRequest(
-          Map("response" -> e.getMessage, "contract" -> e.tokenAddress),
+          daemonExceptionInfo(e) + ("contract" -> e.tokenAddress),
           response
         )
     }

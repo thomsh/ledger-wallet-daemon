@@ -1,6 +1,7 @@
 package co.ledger.wallet.daemon.api
 
 import co.ledger.wallet.daemon.controllers.responses.{ErrorCode, ErrorResponseBody}
+import co.ledger.wallet.daemon.exceptions.ErrorCodes
 import co.ledger.wallet.daemon.models.{WalletView, WalletsViewWithCount}
 import co.ledger.wallet.daemon.utils.APIFeatureTest
 import com.twitter.finagle.http.{Response, Status}
@@ -31,7 +32,7 @@ class WalletsApiTest extends APIFeatureTest {
     createPool(WALLET_POOL)
     val notFoundErr = server.mapper.objectMapper.readValue[ErrorResponseBody](
       assertGetWallet(WALLET_POOL, "not_exist_wallet", Status.NotFound).contentString)
-    assert(notFoundErr === ErrorResponseBody(ErrorCode.Not_Found, Map("response"->"Wallet doesn't exist","wallet_name"->"not_exist_wallet")))
+    assert(notFoundErr.rc === ErrorCode.Not_Found)
     deletePool(WALLET_POOL)
   }
 
@@ -78,13 +79,16 @@ class WalletsApiTest extends APIFeatureTest {
     val expectedErr = ErrorResponseBody(ErrorCode.Bad_Request, Map("response"->"Wallet pool doesn't exist", "pool_name"->"not_existing_pool"))
     val result = assertGetWallets("not_existing_pool", 0, 2, Status.BadRequest)
     val getWalletsErr = server.mapper.objectMapper.readValue[ErrorResponseBody](result.contentString)
-    assert(getWalletsErr === expectedErr)
+    assert(getWalletsErr.rc === expectedErr.rc)
+    assert(getWalletsErr.msg.getOrElse("error_code", 0) === ErrorCodes.WALLET_POOL_NOT_FOUND)
     val getWalletErr = server.mapper.objectMapper.readValue[ErrorResponseBody](
       assertGetWallet("not_existing_pool", "my_wallet", Status.BadRequest).contentString)
-    assert(getWalletErr === expectedErr)
+    assert(getWalletErr.rc === expectedErr.rc)
+    assert(getWalletErr.msg.getOrElse("error_code", 0) === ErrorCodes.WALLET_POOL_NOT_FOUND)
     val postWalletErr = server.mapper.objectMapper.readValue[ErrorResponseBody](
       assertWalletCreation("not_existing_pool", "my_wallet", "bitcoin", Status.BadRequest).contentString)
-    assert(postWalletErr === expectedErr)
+    assert(postWalletErr.rc === expectedErr.rc)
+    assert(postWalletErr.msg.getOrElse("error_code", 0) === ErrorCodes.WALLET_POOL_NOT_FOUND)
   }
 
   test("WalletsApi#Post wallet with non exist currency to existing pool") {
@@ -92,7 +96,8 @@ class WalletsApiTest extends APIFeatureTest {
     val expectedErr = ErrorResponseBody(ErrorCode.Bad_Request, Map("response"->"Currency not support", "currency_name"->"non_existing_currency"))
     val result = assertWalletCreation("random_pool", "my_wallet", "non_existing_currency", Status.BadRequest)
     val postWalletErr = server.mapper.objectMapper.readValue[ErrorResponseBody](result.contentString)
-    assert(expectedErr === postWalletErr)
+    assert(expectedErr.rc === postWalletErr.rc)
+    assert(postWalletErr.msg.getOrElse("error_code", 0) === ErrorCodes.CURRENCY_NOT_FOUND)
     deletePool("random_pool")
   }
 
