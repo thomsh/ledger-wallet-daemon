@@ -58,7 +58,6 @@ class ApiClient(implicit val ec: ExecutionContext) {
     }
     val request = Request(Method.Get, path)
     val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
-    println(s"USING HOST SERVICE $currencyName => $host")
     request.host = host
 
     service(request).map { response =>
