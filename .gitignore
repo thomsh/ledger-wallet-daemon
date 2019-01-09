@@ -14,17 +14,15 @@ project/plugins/project/
 daemon/project
 ledger-core-binding/lib/resources
 core_data_path/
+src/main/resources/application.conf
 
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
 .idea/
 .DS_Store
-/daemon/src/main/resources/application.conf
 
 *.db
 *.log
 
-# conf file as it is sample now
-daemon/src/main/resources/*.conf
 core_data/
