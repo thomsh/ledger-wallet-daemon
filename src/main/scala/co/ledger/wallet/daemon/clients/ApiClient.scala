@@ -28,13 +28,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
   private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private[this] val defaultHostService = {
-    val (host, port, poolSize) = DaemonConfiguration.apiConnection.default("")
-    (host, buildClient(poolSize).newService(s"$host:$port"))
+  private[this] val hostServices = DaemonConfiguration.explorerApiAddresses.map { case (currencyName, (host, port, poolSize)) =>
+    // This is required because Http.Client.newService fails if the url starts with the protocol
+    val hostNoProtocol = host.replaceFirst(".+?://", "")
+    (currencyName, (hostNoProtocol, buildClient(poolSize).newService(s"$hostNoProtocol:$port")))
   }
-  private[this] val hostServices = DaemonConfiguration.apiConnection.map { case (currencyName, (host, port, poolSize)) =>
-    (currencyName, (host, buildClient(poolSize).newService(s"$host:$port")))
-  }.withDefaultValue(defaultHostService)
 
   //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
@@ -59,7 +57,8 @@ class ApiClient(implicit val ec: ExecutionContext) {
       case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
     }
     val request = Request(Method.Get, path)
-    val (host, service) = hostServices(currencyName)
+    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
+    println(s"USING HOST SERVICE $currencyName => $host")
     request.host = host
 
     service(request).map { response =>
@@ -68,7 +67,7 @@ class ApiClient(implicit val ec: ExecutionContext) {
   }
 
   def getGas(currencyName: String): Future[GasInfo] = {
-    val (host, service) = hostServices(currencyName)
+    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
     val request = Request(Method.Get, "/blockchain/v3/fees")
     request.host = host
 

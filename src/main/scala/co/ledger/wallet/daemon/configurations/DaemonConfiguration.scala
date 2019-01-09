@@ -71,17 +71,16 @@ object DaemonConfiguration {
 
   lazy val coreDataPath: String = Try(config.getString("core_data_path")).getOrElse("./core_data")
 
-  val explorerApiAddresses: scala.collection.Map[String, String] =
-    config.getObject("explorer.api").unwrapped().asScala.mapValues(_.toString)
+  val explorerApiAddresses: scala.collection.Map[String, (String, Int, Int)] = {
+    config.getConfigList("explorer.api").asScala.toList.map { cryptoConf =>
+      cryptoConf.getString("currency") -> (
+        cryptoConf.getString("host"),
+        cryptoConf.getInt("port"),
+        cryptoConf.getInt("connection_pool_size")
+      )
+    }.toMap
+  }
 
   val explorerWebsocketAddresses: scala.collection.Map[String, String] =
     config.getObject("explorer.ws").unwrapped().asScala.mapValues(_.toString)
-
-  val apiConnection: scala.collection.immutable.Map[String, (String, Int, Int)] = {
-    val port = config.getInt("api.port")
-    val pool_size = config.getInt("api.connection_pool_size")
-    collection.immutable.HashMap(explorerApiAddresses.toSeq:_*).map { case (currencyName, host) =>
-      (currencyName, (host.replaceFirst("http://", ""), port, pool_size))
-    }.withDefaultValue((config.getString("api.host"), port, pool_size))
-  }
 }

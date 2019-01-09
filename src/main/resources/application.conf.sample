@@ -7,12 +7,6 @@ sqlite3 = {
   connectionPool = disabled
 }
 
-api = {
-  host = "api.ledgerwallet.com"
-  port = 80 // default
-  connection_pool_size = 10
-}
-
 proxy = {
   enabled = false
   enabled = ${?WALLET_PROXY_ENABLED}
@@ -76,26 +70,29 @@ disable_whitelist = true
 
 core_data_path = "core_data"
 
-explorer {
-  api {
-    // possible keys: bitcoin, bitcoin_testnet, bitcoin_cash,
-    // bitcoin_gold, zcash, zencash, litecoin, peercoin, digibyte,
-    // hcash, qtum, stealthcoin, vertcoin, viacoin, dash, dogecoin,
-    // stratis, komodo, poswallet, pivx, clubcoin, decred,
-    // ethereum, ethereum_ropsten
-    // if no key found, will use default lib core value, which is
-    // currently the v2 url
-    ethereum = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
-    ethereum_ropsten = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
-  }
-  ws {
-    // possible keys: bitcoin, bitcoin_testnet, bitcoin_cash,
-    // bitcoin_gold, zcash, zencash, litecoin, peercoin, digibyte,
-    // hcash, qtum, stealthcoin, vertcoin, viacoin, dash, dogecoin,
-    // stratis, komodo, poswallet, pivx, clubcoin, decred,
-    // ethereum, ethereum_ropsten
-    // if no key found, will use default lib core value, which is
-    // currently the v2 url
+explorer = {
+  api = [
+    {
+      currency = "default"
+      host = "api.ledgerwallet.com"
+      port = 80
+      connection_pool_size = 10
+    }
+    {
+      currency = "ethereum"
+      host = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
+      port = 80
+      connection_pool_size = 10
+    }
+    {
+      currency = "ethereum_ropsten"
+      host = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
+      port = 80
+      connection_pool_size = 10
+    }
+  ]
+  ws = {
+    default = "wss://ws.ledgerwallet.com/blockchain/v2/{}/ws"
     ethereum = "ws://notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
     ethereum_ropsten = "ws://notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
   }
