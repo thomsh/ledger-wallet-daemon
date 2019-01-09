@@ -27,17 +27,11 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
-  private[this] val (host, port, poolSize) = DaemonConfiguration.apiConnection
   private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private [this] val client = if(proxyEnabled) {
-    Http.client
-      .withSessionPool.maxSize(poolSize)
-      .configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
-      .newService(s"$host:$port")
-  } else {
-    Http.client
-      .withSessionPool.maxSize(poolSize)
-      .newService(s"$host:$port")
+  private[this] val hostServices = DaemonConfiguration.explorerApiAddresses.map { case (currencyName, (host, port, poolSize)) =>
+    // This is required because Http.Client.newService fails if the url starts with the protocol
+    val hostNoProtocol = host.replaceFirst(".+?://", "")
+    (currencyName, (hostNoProtocol, buildClient(poolSize).newService(s"$hostNoProtocol:$port")))
   }
 
   //TODO: support dynamically
@@ -63,10 +57,30 @@ class ApiClient(implicit val ec: ExecutionContext) {
       case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
     }
     val request = Request(Method.Get, path)
-    request.host = "api.ledgerwallet.com"
-    client(request).map { response =>
+    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
+    request.host = host
+
+    service(request).map { response =>
       mapper.readValue(response.contentString, classOf[FeeInfo])
     }.asScala
+  }
+
+  def getGas(currencyName: String): Future[GasInfo] = {
+    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
+    val request = Request(Method.Get, "/blockchain/v3/fees")
+    request.host = host
+
+    service(request).map { response =>
+      mapper.readValue(response.contentString, classOf[GasInfo])
+    }.asScala
+  }
+
+  private def buildClient(poolSize: Int): Http.Client = {
+    var client = Http.client.withSessionPool.maxSize(poolSize)
+    if (proxyEnabled) {
+      client = client.configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
+    }
+    client
   }
 
   private val mapper: ObjectMapper = new ObjectMapper() with ScalaObjectMapper
@@ -86,4 +100,6 @@ object ApiClient {
       case FeeMethod.SLOW => slow / 1000
     }
   }
+
+  case class GasInfo(@JsonProperty("gas_price") price: BigInt)
 }
