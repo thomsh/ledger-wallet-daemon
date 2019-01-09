@@ -16,9 +16,6 @@ object DaemonConfiguration {
   private val DEFAULT_SYNC_INTERVAL: Int = 24 // 24 hours
   private val DEFAULT_SYNC_INITIAL_DELAY: Int = 300 // 5 minutes
 
-  val apiConnection: (String, Int, Int) =
-    (config.getString("api.host"), config.getInt("api.port"), config.getInt("api.connection_pool_size"))
-
   val proxy: (Boolean, String, Int) =
     (config.getBoolean("proxy.enabled"), config.getString("proxy.host"), config.getInt("proxy.port"))
 
@@ -79,4 +76,12 @@ object DaemonConfiguration {
 
   val explorerWebsocketAddresses: scala.collection.Map[String, String] =
     config.getObject("explorer.ws").unwrapped().asScala.mapValues(_.toString)
+
+  val apiConnection: scala.collection.immutable.Map[String, (String, Int, Int)] = {
+    val port = config.getInt("api.port")
+    val pool_size = config.getInt("api.connection_pool_size")
+    collection.immutable.HashMap(explorerApiAddresses.toSeq:_*).map { case (currencyName, host) =>
+      (currencyName, (host.replaceFirst("http://", ""), port, pool_size))
+    }.withDefaultValue((config.getString("api.host"), port, pool_size))
+  }
 }

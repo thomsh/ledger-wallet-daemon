@@ -13,7 +13,6 @@ import com.twitter.finagle.Http
 import co.ledger.wallet.daemon.utils.Utils._
 import com.twitter.finagle.client.Transporter
 import com.twitter.finagle.http.{Method, Request}
-import com.twitter.inject.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -26,14 +25,16 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   */
 @Singleton
-class ApiClient(implicit val ec: ExecutionContext) extends Logging {
+class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
-  private[this] val (btcHost, port, poolSize) = DaemonConfiguration.apiConnection
   private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private[this] val btcService = buildClient().newService(s"$btcHost:$port")
-  private[this] val ethServices = DaemonConfiguration.explorerApiAddresses.map { case (currencyName, host) =>
-    (currencyName, (host, buildClient().newService(s"$host:$port")))
+  private[this] val defaultHostService = {
+    val (host, port, poolSize) = DaemonConfiguration.apiConnection.default("")
+    (host, buildClient(poolSize).newService(s"$host:$port"))
   }
+  private[this] val hostServices = DaemonConfiguration.apiConnection.map { case (currencyName, (host, port, poolSize)) =>
+    (currencyName, (host, buildClient(poolSize).newService(s"$host:$port")))
+  }.withDefaultValue(defaultHostService)
 
   //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
@@ -58,24 +59,25 @@ class ApiClient(implicit val ec: ExecutionContext) extends Logging {
       case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
     }
     val request = Request(Method.Get, path)
-    request.host = "api.ledgerwallet.com"
-    btcService(request).map { response =>
+    val (host, service) = hostServices(currencyName)
+    request.host = host
+
+    service(request).map { response =>
       mapper.readValue(response.contentString, classOf[FeeInfo])
     }.asScala
   }
 
   def getGas(currencyName: String): Future[GasInfo] = {
-    val (host, service) = ethServices(currencyName)
+    val (host, service) = hostServices(currencyName)
     val request = Request(Method.Get, "/blockchain/v3/fees")
     request.host = host
 
     service(request).map { response =>
-      info(s"$response : ${response.status} ${response.contentString}")
       mapper.readValue(response.contentString, classOf[GasInfo])
     }.asScala
   }
 
-  private def buildClient(): Http.Client = {
+  private def buildClient(poolSize: Int): Http.Client = {
     var client = Http.client.withSessionPool.maxSize(poolSize)
     if (proxyEnabled) {
       client = client.configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
