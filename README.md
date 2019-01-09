@@ -9,7 +9,7 @@ Prerequisites: `docker` and `sbt` installed
 
 1. Check out [lib core project](https://github.com/LedgerHQ/lib-ledger-core)
    ```bash
-   git clone --recurse-submodules https://github   .com/LedgerHQ/lib-ledger-core
+   git clone --recurse-submodules https://github.com/LedgerHQ/lib-ledger-core
    ```
 
 2. Copy `build-jar.sh` and `build-jar-linux.sh` to the lib core project folder
