@@ -187,7 +187,11 @@ object Account extends Logging {
         for {
           gasPrice <- ti.gasPrice match {
             case Some(amount) => Future.successful(amount)
-            case None => ClientFactory.apiClient.getGas(c.getName).map { _.price }
+            case None => ClientFactory.apiClient.getGasPrice(c.getName)
+          }
+          gasLimit <- ti.gasLimit match {
+            case Some(amount) => Future.successful(amount)
+            case None => ClientFactory.apiClient.getGasLimit(c.getName, ti.recipient)
           }
           v <- ti.contract match {
             case Some(contract) =>
@@ -198,7 +202,7 @@ object Account extends Logging {
                     val inputData = erc20Account.getTransferToAddressData(BigInt.fromIntegerString(ti.amount.toString(10), 10), ti.recipient)
                     val v = a.asEthereumLikeAccount().buildTransaction()
                       .sendToAddress(c.convertAmount(0), contract)
-                      .setGasLimit(c.convertAmount(ti.gasLimit))
+                      .setGasLimit(c.convertAmount(gasLimit))
                       .setGasPrice(c.convertAmount(gasPrice))
                       .setInputData(inputData)
                       .build()
@@ -212,7 +216,7 @@ object Account extends Logging {
             case None =>
               a.asEthereumLikeAccount().buildTransaction()
                 .sendToAddress(c.convertAmount(ti.amount), ti.recipient)
-                .setGasLimit(c.convertAmount(ti.gasLimit))
+                .setGasLimit(c.convertAmount(gasLimit))
                 .setGasPrice(c.convertAmount(gasPrice))
                 .build()
                 .map(UnsignedEthereumTransactionView(_))

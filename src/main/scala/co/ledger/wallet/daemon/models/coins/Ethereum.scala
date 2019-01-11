@@ -80,6 +80,7 @@ case class UnsignedEthereumTransactionView(
                                             @JsonProperty("value") value: scala.BigInt,
                                             @JsonProperty("gas_price") gasPrice: scala.BigInt,
                                             @JsonProperty("gas_limit") gasLimit: scala.BigInt,
+                                            @JsonProperty("fees") fees: scala.BigInt,
                                             @JsonProperty("raw_transaction") rawTransaction: String
                                           ) extends TransactionView
 
@@ -91,6 +92,7 @@ object UnsignedEthereumTransactionView {
       tx.getValue.toBigInt.asScala,
       tx.getGasPrice.toBigInt.asScala,
       tx.getGasLimit.toBigInt.asScala,
+      tx.getGasPrice.toBigInt.asScala * tx.getGasLimit.toBigInt.asScala,
       HexUtils.valueOf(tx.serialize())
     )
   }
