@@ -191,7 +191,7 @@ object Account extends Logging {
           }
           gasLimit <- ti.gasLimit match {
             case Some(amount) => Future.successful(amount)
-            case None => ClientFactory.apiClient.getGasLimit(c.getName, ti.recipient)
+            case None => ClientFactory.apiClient.getGasLimit(c.getName, ti.contract.getOrElse(ti.recipient))
           }
           v <- ti.contract match {
             case Some(contract) =>
