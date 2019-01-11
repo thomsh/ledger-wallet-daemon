@@ -18,12 +18,15 @@ class ScalaHttpClient(implicit val ec: ExecutionContext) extends co.ledger.core.
 import ScalaHttpClient._
 
   override def execute(request: HttpRequest): Unit = Future {
-    val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-    val connection = if(proxyEnabled) {
-      val proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort))
-      new URL(request.getUrl).openConnection(proxy).asInstanceOf[HttpURLConnection]
-    } else {
-      new URL(request.getUrl).openConnection().asInstanceOf[HttpURLConnection]
+    val connection = DaemonConfiguration.proxy match {
+      case None => new URL(request.getUrl).openConnection().asInstanceOf[HttpURLConnection]
+      case Some(proxy) =>
+        new URL(request.getUrl)
+          .openConnection(
+            new java.net.Proxy(
+              java.net.Proxy.Type.HTTP,
+              new InetSocketAddress(proxy.host, proxy.port)))
+          .asInstanceOf[HttpURLConnection]
     }
     connection.setRequestMethod(resolveMethod(request.getMethod))
     for ((key, value) <- request.getHeaders.asScala) {

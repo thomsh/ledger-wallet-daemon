@@ -105,14 +105,14 @@ class Pool(private val coreP: core.WalletPool, val id: Long) extends Logging {
   def addWalletIfNotExist(walletName: String, currencyName: String): Future[core.Wallet] = {
     coreP.getCurrency(currencyName).flatMap { coreC =>
       val walletConfig = core.DynamicObject.newInstance()
-      val apiUrl = DaemonConfiguration.explorerApiAddresses.get(coreC.getName) match {
-        case Some((host, _, _)) => host
+      val apiUrl = DaemonConfiguration.explorer.api.paths.get(coreC.getName) match {
+        case Some(path) => path.host
         case None => ConfigurationDefaults.BLOCKCHAIN_DEFAULT_API_ENDPOINT
       }
       walletConfig.putString("BLOCKCHAIN_EXPLORER_API_ENDPOINT", apiUrl)
-      val wsUrl = DaemonConfiguration.explorerWebsocketAddresses.getOrElse(
+      val wsUrl = DaemonConfiguration.explorer.ws.getOrElse(
         coreC.getName,
-        DaemonConfiguration.explorerWebsocketAddresses("default"))
+        DaemonConfiguration.explorer.ws("default"))
       walletConfig.putString("BLOCKCHAIN_OBSERVER_WS_ENDPOINT", wsUrl)
       coreP.createWallet(walletName, coreC, walletConfig).flatMap { coreW =>
         info(LogMsgMaker.newInstance("Wallet created").append("name", walletName).append("pool_name", name).append("currency_name", currencyName).toString())

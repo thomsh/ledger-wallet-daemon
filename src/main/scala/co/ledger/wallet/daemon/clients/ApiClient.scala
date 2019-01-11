@@ -2,17 +2,15 @@ package co.ledger.wallet.daemon.clients
 
 import java.net.InetSocketAddress
 
-import javax.inject.Singleton
 import co.ledger.wallet.daemon.configurations.DaemonConfiguration
 import co.ledger.wallet.daemon.models.FeeMethod
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.twitter.finagle.Http
 import co.ledger.wallet.daemon.utils.Utils._
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.twitter.finagle.client.Transporter
-import com.twitter.finagle.http.{Method, Request}
+import com.twitter.finagle.http.{Method, Request, Response}
+import com.twitter.finagle.{Http, Service}
+import com.twitter.finatra.json.FinatraObjectMapper
+import javax.inject.Singleton
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,75 +25,77 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
-  private[this] val (proxyEnabled, proxyHost, proxyPort) = DaemonConfiguration.proxy
-  private[this] val hostServices = DaemonConfiguration.explorerApiAddresses.map { case (currencyName, (host, port, poolSize)) =>
-    // This is required because Http.Client.newService fails if the url starts with the protocol
-    val hostNoProtocol = host.replaceFirst(".+?://", "")
-    (currencyName, (hostNoProtocol, buildClient(poolSize).newService(s"$hostNoProtocol:$port")))
-  }
 
-  //TODO: support dynamically
   def getFees(currencyName: String): Future[FeeInfo] = {
-    val path = currencyName match {
-      case "bitcoin" => "/blockchain/v2/btc/fees"
-      case "bitcoin_testnet" => "/blockchain/v2/btc_testnet/fees"
-      case "dogecoin" => "/blockchain/v2/doge/fees"
-      case "litecoin" => "/blockchain/v2/ltc/fees"
-      case "dash" => "/blockchain/v2/dash/fees"
-      case "komodo" => "/blockchain/v2/kmd/fees"
-      case "pivx" => "/blockchain/v2/pivx/fees"
-      case "viacoin" => "/blockchain/v2/via/fees"
-      case "vertcoin" => "/blockchain/v2/vtc/fees"
-      case "digibyte" => "/blockchain/v2/dgb/fees"
-      case "bitcoin_cash" => "/blockchain/v2/abc/fees"
-      case "poswallet" => "/blockchain/v2/posw/fees"
-      case "stratis" => "/blockchain/v2/strat/fees"
-      case "peercoin" => "/blockchain/v2/ppc/fees"
-      case "bitcoin_gold" => "/blockchain/v2/btg/fees"
-      case "zcash" => "/blockchain/v2/zec/fees"
-
-      case _ => throw new UnsupportedOperationException(s"currency not supported '$currencyName'")
-    }
+    val path = paths.getOrElse(currencyName, throw new UnsupportedOperationException(s"Currency not supported '$currencyName'"))
     val request = Request(Method.Get, path)
-    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
-    request.host = host
+    val service = services.getOrElse(currencyName, services("default"))
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[FeeInfo])
+      mapper.parse[FeeInfo](response)
     }.asScala
   }
 
   def getGasLimit(currencyName: String, recipient: String): Future[BigInt] = {
-    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
+    val service = services.getOrElse(currencyName, services("default"))
     val request = Request(Method.Get, s"/blockchain/v3/addresses/$recipient/estimate-gas-limit")
-    request.host = host
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[GasLimit]).limit
+      mapper.parse[GasLimit](response).limit
     }.asScala
   }
 
   def getGasPrice(currencyName: String): Future[BigInt] = {
-    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
-    val request = Request(Method.Get, "/blockchain/v3/fees")
-    request.host = host
+    val service = services.getOrElse(currencyName, services("default"))
+    val path = paths.getOrElse(currencyName, throw new UnsupportedOperationException(s"Currency not supported '$currencyName'"))
+    val request = Request(Method.Get, path)
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[GasPrice]).price
+      mapper.parse[GasPrice](response).price
     }.asScala
   }
 
-  private def buildClient(poolSize: Int): Http.Client = {
-    var client = Http.client.withSessionPool.maxSize(poolSize)
-    if (proxyEnabled) {
-      client = client.configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxyHost, proxyPort)), None))
+  private val mapper: FinatraObjectMapper = FinatraObjectMapper.create()
+  private val client = {
+    DaemonConfiguration.proxy match {
+      case None =>
+        Http.client
+          .withSessionPool.maxSize(DaemonConfiguration.explorer.api.connectionPoolSize)
+      case Some(proxy) =>
+        Http.client
+          .withSessionPool.maxSize(DaemonConfiguration.explorer.api.connectionPoolSize)
+          .configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxy.host, proxy.port)), None))
     }
-    client
   }
+  private val services: Map[String, Service[Request, Response]] =
+    DaemonConfiguration.explorer.api.paths
+      .map { case(currency, path) =>
+        val p = path.filterPrefix
+        currency -> client.newService(s"${p.host}:${p.port}")
+      }
 
-  private val mapper: ObjectMapper = new ObjectMapper() with ScalaObjectMapper
-  mapper.registerModule(DefaultScalaModule)
-  mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+  private val paths: Map[String, String] = {
+    Map(
+      "bitcoin" -> "/blockchain/v2/btc/fees",
+      "bitcoin_testnet" -> "/blockchain/v2/btc_testnet/fees",
+      "dogecoin" -> "/blockchain/v2/doge/fees",
+      "litecoin" -> "/blockchain/v2/ltc/fees",
+      "dash" -> "/blockchain/v2/dash/fees",
+      "komodo" -> "/blockchain/v2/kmd/fees",
+      "pivx" -> "/blockchain/v2/pivx/fees",
+      "viacoin" -> "/blockchain/v2/via/fees",
+      "vertcoin" -> "/blockchain/v2/vtc/fees",
+      "digibyte" -> "/blockchain/v2/dgb/fees",
+      "bitcoin_cash" -> "/blockchain/v2/abc/fees",
+      "poswallet" -> "/blockchain/v2/posw/fees",
+      "stratis" -> "/blockchain/v2/strat/fees",
+      "peercoin" -> "/blockchain/v2/ppc/fees",
+      "bitcoin_gold" -> "/blockchain/v2/btg/fees",
+      "zcash" -> "/blockchain/v2/zec/fees",
+      "ethereum" -> "/blockchain/v3/fees",
+      "ethereum_ropsten" -> "/blockchain/v3/fees",
+    )
+  }
 }
 
 object ApiClient {

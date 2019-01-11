@@ -16,8 +16,13 @@ object DaemonConfiguration {
   private val DEFAULT_SYNC_INTERVAL: Int = 24 // 24 hours
   private val DEFAULT_SYNC_INITIAL_DELAY: Int = 300 // 5 minutes
 
-  val proxy: (Boolean, String, Int) =
-    (config.getBoolean("proxy.enabled"), config.getString("proxy.host"), config.getInt("proxy.port"))
+  val proxy: Option[Proxy] = {
+    if (config.getBoolean("proxy.enabled")) {
+      Some(Proxy(config.getString("proxy.host"), config.getInt("proxy.port")))
+    } else {
+      None
+    }
+  }
 
   val adminUsers: Seq[(String, String)] = if (config.hasPath("demo_users")) {
     val usersConfig = config.getConfigList("demo_users").asScala
@@ -71,16 +76,26 @@ object DaemonConfiguration {
 
   lazy val coreDataPath: String = Try(config.getString("core_data_path")).getOrElse("./core_data")
 
-  val explorerApiAddresses: scala.collection.Map[String, (String, Int, Int)] = {
-    config.getConfigList("explorer.api").asScala.toList.map { cryptoConf =>
-      cryptoConf.getString("currency") -> (
-        cryptoConf.getString("host"),
-        cryptoConf.getInt("port"),
-        cryptoConf.getInt("connection_pool_size")
-      )
+  val explorer: ExplorerConfig = {
+    val explorer = config.getConfig("explorer")
+    val api = explorer.getConfig("api")
+    val connectionPoolSize = api.getInt("connection_pool_size")
+    val paths = api.getConfigList("paths").asScala.toList.map { path =>
+      val currency = path.getString("currency")
+      val host = path.getString("host")
+      val port = path.getInt("port")
+      currency -> PathConfig(host, port)
     }.toMap
+    val ws = explorer.getObject("ws").unwrapped().asScala.toMap.mapValues(_.toString)
+    ExplorerConfig(ApiConfig(connectionPoolSize, paths), ws)
   }
 
-  val explorerWebsocketAddresses: scala.collection.Map[String, String] =
-    config.getObject("explorer.ws").unwrapped().asScala.mapValues(_.toString)
+  case class ApiConfig(connectionPoolSize: Int, paths: Map[String, PathConfig])
+  case class PathConfig(host: String, port: Int) {
+    def filterPrefix: PathConfig = {
+      PathConfig(host.replaceFirst(".+?://", ""), port)
+    }
+  }
+  case class ExplorerConfig(api: ApiConfig, ws: Map[String, String])
+  case class Proxy(host: String, port: Int)
 }

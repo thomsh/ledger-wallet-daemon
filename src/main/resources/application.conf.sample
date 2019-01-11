@@ -71,26 +71,26 @@ disable_whitelist = true
 core_data_path = "core_data"
 
 explorer = {
-  api = [
-    {
-      currency = "default"
-      host = "api.ledgerwallet.com"
-      port = 80
-      connection_pool_size = 10
-    }
-    {
-      currency = "ethereum"
-      host = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
-      port = 80
-      connection_pool_size = 10
-    }
-    {
-      currency = "ethereum_ropsten"
-      host = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
-      port = 80
-      connection_pool_size = 10
-    }
-  ]
+  api = {
+    connection_pool_size = 50
+    paths = [
+      {
+        currency = default
+        host = "api.ledgerwallet.com"
+        port = 80
+      }
+      {
+        currency = ethereum
+        host = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
+        port = 80
+      }
+      {
+        currency = ethereum_ropsten
+        host = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
+        port = 80
+      }
+    ]
+  }
   ws = {
     default = "wss://ws.ledgerwallet.com/blockchain/v2/{}/ws"
     ethereum = "ws://notification.explorers.dev.aws.ledger.fr:9000/ws/{}"
