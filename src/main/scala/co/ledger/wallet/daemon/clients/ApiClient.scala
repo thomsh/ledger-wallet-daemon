@@ -65,13 +65,23 @@ class ApiClient(implicit val ec: ExecutionContext) {
     }.asScala
   }
 
-  def getGas(currencyName: String): Future[GasInfo] = {
+  def getGasLimit(currencyName: String, recipient: String): Future[BigInt] = {
+    val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
+    val request = Request(Method.Get, s"/blockchain/v3/addresses/$recipient/estimate-gas-limit")
+    request.host = host
+
+    service(request).map { response =>
+      mapper.readValue(response.contentString, classOf[GasInfo]).limit
+    }.asScala
+  }
+
+  def getGasPrice(currencyName: String): Future[BigInt] = {
     val (host, service) = hostServices.getOrElse(currencyName, hostServices("default"))
     val request = Request(Method.Get, "/blockchain/v3/fees")
     request.host = host
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[GasInfo])
+      mapper.readValue(response.contentString, classOf[GasInfo]).price
     }.asScala
   }
 
@@ -101,5 +111,6 @@ object ApiClient {
     }
   }
 
-  case class GasInfo(@JsonProperty("gas_price") price: BigInt)
+  case class GasInfo(@JsonProperty("gas_price") price: BigInt,
+                     @JsonProperty("estimated_gas_limit") limit: BigInt)
 }
