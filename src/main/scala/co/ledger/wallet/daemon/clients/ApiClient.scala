@@ -22,33 +22,33 @@ import scala.concurrent.{ExecutionContext, Future}
   * Time: 14:32
   *
   */
+// TODO: Map response from service to be more readable
 @Singleton
 class ApiClient(implicit val ec: ExecutionContext) {
   import ApiClient._
 
   def getFees(currencyName: String): Future[FeeInfo] = {
     val path = paths.getOrElse(currencyName, throw new UnsupportedOperationException(s"Currency not supported '$currencyName'"))
-    val request = Request(Method.Get, path)
-    val service = services.getOrElse(currencyName, services("default"))
-
+    val (host, service) = services.getOrElse(currencyName, services("default"))
+    val request = Request(Method.Get, path).host(host)
     service(request).map { response =>
       mapper.parse[FeeInfo](response)
     }.asScala
   }
 
   def getGasLimit(currencyName: String, recipient: String): Future[BigInt] = {
-    val service = services.getOrElse(currencyName, services("default"))
+    val (host, service) = services.getOrElse(currencyName, services("default"))
     val request = Request(Method.Get, s"/blockchain/v3/addresses/$recipient/estimate-gas-limit")
-
+      .host(host)
     service(request).map { response =>
       mapper.parse[GasLimit](response).limit
     }.asScala
   }
 
   def getGasPrice(currencyName: String): Future[BigInt] = {
-    val service = services.getOrElse(currencyName, services("default"))
+    val (host, service) = services.getOrElse(currencyName, services("default"))
     val path = paths.getOrElse(currencyName, throw new UnsupportedOperationException(s"Currency not supported '$currencyName'"))
-    val request = Request(Method.Get, path)
+    val request = Request(Method.Get, path).host(host)
 
     service(request).map { response =>
       mapper.parse[GasPrice](response).price
@@ -67,11 +67,11 @@ class ApiClient(implicit val ec: ExecutionContext) {
           .configured(Transporter.HttpProxy(Some(new InetSocketAddress(proxy.host, proxy.port)), None))
     }
   }
-  private val services: Map[String, Service[Request, Response]] =
+  private val services: Map[String,(String, Service[Request, Response])] =
     DaemonConfiguration.explorer.api.paths
       .map { case(currency, path) =>
         val p = path.filterPrefix
-        currency -> client.newService(s"${p.host}:${p.port}")
+        currency -> (p.host, client.newService(s"${p.host}:${p.port}"))
       }
 
   private val paths: Map[String, String] = {
