@@ -71,7 +71,7 @@ class ApiClient(implicit val ec: ExecutionContext) {
     request.host = host
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[GasInfo]).limit
+      mapper.readValue(response.contentString, classOf[GasLimit]).limit
     }.asScala
   }
 
@@ -81,7 +81,7 @@ class ApiClient(implicit val ec: ExecutionContext) {
     request.host = host
 
     service(request).map { response =>
-      mapper.readValue(response.contentString, classOf[GasInfo]).price
+      mapper.readValue(response.contentString, classOf[GasPrice]).price
     }.asScala
   }
 
@@ -111,6 +111,6 @@ object ApiClient {
     }
   }
 
-  case class GasInfo(@JsonProperty("gas_price") price: BigInt,
-                     @JsonProperty("estimated_gas_limit") limit: BigInt)
+  case class GasPrice(@JsonProperty("gas_price") price: BigInt)
+  case class GasLimit(@JsonProperty("estimated_gas_limit") limit: BigInt)
 }
