@@ -81,12 +81,12 @@ explorer = {
       }
       {
         currency = ethereum
-        host = "http://eth-mainnet.explorers.dev.aws.ledger.fr"
+        host = "http://eth-mainnet.explorers.prod.aws.ledger.fr"
         port = 80
       }
       {
         currency = ethereum_ropsten
-        host = "http://eth-ropsten.explorers.dev.aws.ledger.fr"
+        host = "http://eth-ropsten.explorers.prod.aws.ledger.fr"
         port = 80
       }
     ]
