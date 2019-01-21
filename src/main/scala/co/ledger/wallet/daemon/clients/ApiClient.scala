@@ -93,6 +93,7 @@ class ApiClient(implicit val ec: ExecutionContext) {
       "bitcoin_gold" -> "/blockchain/v2/btg/fees",
       "zcash" -> "/blockchain/v2/zec/fees",
       "ethereum" -> "/blockchain/v3/fees",
+      "ethereum_classic" -> "/blockchain/v3/fees",
       "ethereum_ropsten" -> "/blockchain/v3/fees",
     )
   }
