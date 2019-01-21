@@ -5,7 +5,7 @@
 
 When a new version of the libcore is available, we need to update our bindings.
 
-Prerequisites: `docker` and `sbt` installed
+Prerequisites: [docker](https://www.docker.com/get-started) and [sbt](https://www.scala-sbt.org/download.html) installed
 
 1. Check out [lib core project](https://github.com/LedgerHQ/lib-ledger-core)
    ```bash
@@ -28,13 +28,13 @@ Prerequisites: `docker` and `sbt` installed
    ```bash
    # Build for both mac only. You may want to do this when developing, 
    # it's much faster than build for both mac and linux
-   bash buid-jar.sh mac
+   bash build-jar.sh mac
 
    # Build for linux. Linux build is using docker.
-   bash buid-jar.sh all
+   bash build-jar.sh all
 
    # Build for both mac and linux
-   bash buid-jar.sh all
+   bash build-jar.sh all
 
    ```
 
